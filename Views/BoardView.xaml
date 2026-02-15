@@ -1,0 +1,200 @@
+﻿<UserControl x:Class="ChessProject.Views.BoardView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <!-- Chessboard -->
+            <ColumnDefinition Width="Auto"/>
+            <!-- Side panel -->
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+
+
+        <!-- Chess Board -->
+        <Border Grid.Column="0"
+                Padding="10"
+                Background="#333">
+
+            <Border Width="560"
+                    Height="560"
+                    Background="Transparent">
+
+                <ItemsControl ItemsSource="{Binding VisualSquares}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <UniformGrid Rows="8"
+                                         Columns="8"/>
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Border Width="70"
+                                    Height="70"
+                                    Background="{Binding SquareColor}"
+                                    BorderThickness="3">
+
+                                <Border.Style>
+                                    <Style TargetType="Border">
+                                        <Setter Property="BorderBrush" Value="Transparent"/>
+
+                                        <Style.Triggers>
+
+                                            <!-- Normal move -->
+                                            <DataTrigger Binding="{Binding LastMoveHighlight}"
+                                                         Value="Normal">
+                                                <Setter Property="BorderBrush" Value="#FFD700"/> <!-- Gold -->
+                                            </DataTrigger>
+
+                                            <!-- Capture move -->
+                                            <DataTrigger Binding="{Binding LastMoveHighlight}"
+                                                         Value="Capture">
+                                                <Setter Property="BorderBrush" Value="#FF4C4C"/> <!-- Red -->
+                                            </DataTrigger>
+
+                                        </Style.Triggers>
+                                    </Style>
+                                </Border.Style>
+
+                                <Image Source="{Binding PieceImagePath}"
+                                       Stretch="Uniform"/>
+                            </Border>
+
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+
+            </Border>
+        </Border>
+
+
+        <!-- Side Panel -->
+        <Border Grid.Column="1"
+                Padding="16"
+                Background="#222">
+
+            <StackPanel Orientation="Vertical"
+                        VerticalAlignment="Top"
+                        HorizontalAlignment="Stretch"
+                        Width="260">
+
+                <!-- Opening Information -->
+                <TextBlock Text="Opening"
+                           FontSize="16"
+                           FontWeight="Bold"
+                           Foreground="White"
+                           Margin="0,0,0,8"/>
+
+                <TextBlock Text="{Binding OpeningName}"
+                           FontSize="14"
+                           Foreground="White"
+                           TextWrapping="Wrap"
+                           MaxWidth="240"/>
+
+
+                <TextBlock Text="{Binding ECOCode}"
+                           FontSize="12"
+                           Foreground="#BBBBBB"
+                           Margin="0,0,0,16"/>
+
+                <!-- Board Controls -->
+                <TextBlock Text="Controls"
+                           FontSize="16"
+                           FontWeight="Bold"
+                           Foreground="White"
+                           Margin="0,0,0,8"/>
+
+                <StackPanel Orientation="Horizontal"
+                            HorizontalAlignment="Center"
+                            Margin="0,0,0,16">
+
+                    <Button Content="⟲ Reset"
+                            Width="70"
+                            Margin="4"
+                            Command="{Binding ResetCommand}"/>
+
+                    <Button Content="◀"
+                            Width="40"
+                            Margin="4"
+                            Command="{Binding PreviousCommand}"/>
+
+                    <Button Content="▶"
+                            Width="40"
+                            Margin="4"
+                            Command="{Binding NextCommand}"/>
+
+                    <Button Content="⇅ Flip Board"
+                            Width="100"
+                            Margin="4"
+                            Command="{Binding FlipBoardCommand}"/>
+
+                </StackPanel>
+
+                <!-- Move Information -->
+                <TextBlock Text="Move"
+                           FontSize="16"
+                           FontWeight="Bold"
+                           Foreground="White"
+                           Margin="0,0,0,8"/>
+
+                <TextBlock Text="{Binding CurrentMoveDisplay}"
+                           FontSize="14"
+                           Foreground="White"
+                           Margin="0,0,0,8"/>
+
+                
+                <!-- Move List -->
+                <ListBox ItemsSource="{Binding DisplayMoves}"
+                         Height="200"
+                         BorderThickness="0"
+                         Background="Transparent"
+                         Margin="0,0,0,16">
+
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <TextBlock Text="{Binding Notation}"
+                                       Foreground="White"
+                                       Padding="4"/>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+
+                    <ListBox.ItemContainerStyle>
+                        <Style TargetType="ListBoxItem">
+                            <Setter Property="Background" Value="Transparent"/>
+                            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsCurrent}" Value="True">
+                                    <Setter Property="Background" Value="#444"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </ListBox.ItemContainerStyle>
+
+                </ListBox>
+
+                <!-- Statistics -->
+                <TextBlock Text="Statistics"
+                           FontSize="16"
+                           FontWeight="Bold"
+                           Foreground="White"
+                           Margin="0,0,0,8"/>
+
+                <StackPanel Orientation="Vertical">
+                    <TextBlock Text="{Binding WhiteWinPercentage, StringFormat=White Win: {0}%}"
+                               Foreground="White"
+                               FontSize="12"/>
+                    <TextBlock Text="{Binding DrawPercentage, StringFormat=Draw: {0}%}"
+                               Foreground="White"
+                               FontSize="12"/>
+                    <TextBlock Text="{Binding BlackWinPercentage, StringFormat=Black Win: {0}%}"
+                               Foreground="White"
+                               FontSize="12"/>
+                </StackPanel>
+
+            </StackPanel>
+        </Border>
+
+    </Grid>
+</UserControl>

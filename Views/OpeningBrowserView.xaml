@@ -1,0 +1,198 @@
+﻿<UserControl x:Class="ChessProject.Views.OpeningBrowserView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:conv="clr-namespace:ChessProject.Converters"
+             mc:Ignorable="d">
+
+    <UserControl.Resources>
+        <conv:BoolToArrowConverter x:Key="BoolToArrowConverter"/>
+        <conv:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
+    </UserControl.Resources>
+
+
+    <Border Background="#1E1E1E"
+            Padding="16">
+
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <!-- Title -->
+            <TextBlock Text="Opening Browser"
+                       FontSize="20"
+                       FontWeight="Bold"
+                       Foreground="White"
+                       Margin="0,0,0,12"/>
+
+            <!-- Search & Filter -->
+            <StackPanel Grid.Row="1"
+                        Orientation="Horizontal"
+                        Margin="0,0,0,12">
+
+                <!-- Search -->
+                <TextBox Width="220"
+                         Margin="0,0,12,0"
+                         Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
+                         ToolTip="Search opening name or ECO"/>
+
+                <!-- Colour Filter -->
+                <ComboBox Width="120"
+                          SelectedItem="{Binding SelectedColour}">
+                    <ComboBox.ItemsSource>
+                        <x:Array Type="sys:String"
+                                 xmlns:sys="clr-namespace:System;assembly=mscorlib">
+                            <sys:String>All</sys:String>
+                            <sys:String>White</sys:String>
+                            <sys:String>Black</sys:String>
+                        </x:Array>
+                    </ComboBox.ItemsSource>
+                </ComboBox>
+
+            </StackPanel>
+
+            <!-- Openings List -->
+            <ListView Grid.Row="2"
+                      ItemsSource="{Binding FilteredOpenings}"
+                      SelectedItem="{Binding SelectedOpening}"
+                      Margin="0,0,0,12">
+
+                <ListView.View>
+                    <GridView>
+
+                        <!-- Opening -->
+                        <GridViewColumn Width="550">
+                            <GridViewColumn.Header>
+                                <Button Command="{Binding SortByOpeningCommand}"
+                                        Background="Transparent"
+                                        BorderThickness="0"
+                                        FontWeight="Bold">
+
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="Opening"/>
+
+                                        <!-- Sort Arrow -->
+                                        <TextBlock Margin="6,0,0,0"
+                                                   FontWeight="Bold"
+                                                   Text="{Binding IsSortAscending,
+                                                          Converter={StaticResource BoolToArrowConverter}}"
+                                                   Visibility="{Binding IsSortingByOpening,
+                                                          Converter={StaticResource BoolToVisibilityConverter}}"/>
+                                    </StackPanel>
+
+                                </Button>
+                            </GridViewColumn.Header>
+
+                            <GridViewColumn.DisplayMemberBinding>
+                                <Binding Path="Opening"/>
+                            </GridViewColumn.DisplayMemberBinding>
+                        </GridViewColumn>
+
+                        <!-- ECO -->
+                        <GridViewColumn Width="100">
+                            <GridViewColumn.Header>
+                                <Button Command="{Binding SortByEcoCommand}"
+                                        Background="Transparent"
+                                        BorderThickness="0"
+                                        FontWeight="Bold">
+
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="ECO"/>
+
+                                        <!-- Sort Arrow -->
+                                        <TextBlock Margin="6,0,0,0"
+                                                   FontWeight="Bold"
+                                                   Text="{Binding IsSortAscending,
+                                                          Converter={StaticResource BoolToArrowConverter}}"
+                                                   Visibility="{Binding IsSortingByEco,
+                                                          Converter={StaticResource BoolToVisibilityConverter}}"/>
+                                    </StackPanel>
+
+                                </Button>
+                            </GridViewColumn.Header>
+
+                            <GridViewColumn.DisplayMemberBinding>
+                                <Binding Path="ECO"/>
+                            </GridViewColumn.DisplayMemberBinding>
+                        </GridViewColumn>
+
+                        <!-- White Win % -->
+                        <GridViewColumn Width="100">
+                            <GridViewColumn.Header>
+                                <Button Command="{Binding SortByWhiteWinCommand}"
+                                        Background="Transparent"
+                                        BorderThickness="0"
+                                        FontWeight="Bold">
+
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="White Win %"/>
+
+                                        <!-- Sort Arrow -->
+                                        <TextBlock Margin="6,0,0,0"
+                                                   FontWeight="Bold"
+                                                   Text="{Binding IsSortAscending,
+                                                          Converter={StaticResource BoolToArrowConverter}}"
+                                                   Visibility="{Binding IsSortingByWhiteWin,
+                                                          Converter={StaticResource BoolToVisibilityConverter}}"/>
+                                    </StackPanel>
+
+                                </Button>
+                            </GridViewColumn.Header>
+
+                            <GridViewColumn.DisplayMemberBinding>
+                                <Binding Path="WhiteWinPercent"/>
+                            </GridViewColumn.DisplayMemberBinding>
+                        </GridViewColumn>
+
+                        <!-- Draw % -->
+                        <GridViewColumn Header="Draw %"
+                                        Width="100"
+                                        DisplayMemberBinding="{Binding DrawPercent}"/>
+
+                        <!-- Black Win % -->
+                        <GridViewColumn Width="100">
+                            <GridViewColumn.Header>
+                                <Button Command="{Binding SortByBlackWinCommand}"
+                                        Background="Transparent"
+                                        BorderThickness="0"
+                                        FontWeight="Bold">
+
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="Black Win %"/>
+
+                                        <!-- Sort Arrow -->
+                                        <TextBlock Margin="6,0,0,0"
+                                                   FontWeight="Bold"
+                                                   Text="{Binding IsSortAscending,
+                                                          Converter={StaticResource BoolToArrowConverter}}"
+                                                   Visibility="{Binding IsSortingByBlackWin,
+                                                          Converter={StaticResource BoolToVisibilityConverter}}"/>
+                                    </StackPanel>
+
+                                </Button>
+                            </GridViewColumn.Header>
+
+                            <GridViewColumn.DisplayMemberBinding>
+                                <Binding Path="BlackWinPercent"/>
+                            </GridViewColumn.DisplayMemberBinding>
+                        </GridViewColumn>
+
+                    </GridView>
+                </ListView.View>
+            </ListView>
+
+            <!-- Load Button -->
+            <Button Grid.Row="3"
+                    Content="Load Opening"
+                    Width="140"
+                    HorizontalAlignment="Right"
+                    Command="{Binding LoadOpeningCommand}"/>
+
+        </Grid>
+    </Border>
+</UserControl>
