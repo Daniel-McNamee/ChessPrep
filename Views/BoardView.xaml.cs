@@ -1,5 +1,7 @@
-﻿using System.Windows.Controls;
-using ChessProject.ViewModels;
+﻿using ChessProject.ViewModels;
+using System.ComponentModel;
+using System.Windows;
+using System.Windows.Controls;
 
 namespace ChessProject.Views
 {
@@ -8,6 +10,27 @@ namespace ChessProject.Views
         public BoardView()
         {
             InitializeComponent();
+            DataContextChanged += OnDataContextChanged;
+        }
+
+        private void OnDataContextChanged(object sender, DependencyPropertyChangedEventArgs e)
+        {
+            if (e.NewValue is INotifyPropertyChanged vm)
+            {
+                vm.PropertyChanged += ViewModel_PropertyChanged;
+            }
+        }
+
+        private void ViewModel_PropertyChanged(object sender, PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName == "CurrentMoveIndex")
+            {
+                Dispatcher.Invoke(() =>
+                {
+                    if (MoveList.SelectedItem != null)
+                        MoveList.ScrollIntoView(MoveList.SelectedItem);
+                });
+            }
         }
     }
 }

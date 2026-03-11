@@ -66,6 +66,51 @@ namespace ChessProject.ViewModels
         // Used by move application engine to rebuild board state
         private List<string> _moves = new List<string>();
 
+        public string WhitePlayer { get; private set; }
+        public int WhiteRating { get; private set; }
+
+        public string BlackPlayer { get; private set; }
+        public int BlackRating { get; private set; }
+
+        public string GameResult { get; private set; }
+        public string GameDate { get; private set; }
+
+        public string GameTimeControl { get; private set; }
+
+
+        private bool _isOpeningMode;
+        public bool IsOpeningMode
+        {
+            get => _isOpeningMode;
+            set
+            {
+                _isOpeningMode = value;
+                OnPropertyChanged();
+            }
+        }
+
+        private bool _isGameMode;
+        public bool IsGameMode
+        {
+            get => _isGameMode;
+            set
+            {
+                _isGameMode = value;
+                OnPropertyChanged();
+            }
+        }
+
+        public MoveViewModel CurrentMove
+        {
+            get
+            {
+                if (CurrentMoveIndex < 0 || CurrentMoveIndex >= DisplayMoves.Count)
+                    return null;
+
+                return DisplayMoves[CurrentMoveIndex];
+            }
+        }
+
         #endregion
 
 
@@ -73,6 +118,9 @@ namespace ChessProject.ViewModels
         // Constructors :
         public BoardViewModel()
         {
+            IsOpeningMode = true;
+            IsGameMode = false;
+
             // Create board square collection and populate with 64 squares
             Squares = new ObservableCollection<SquareViewModel>();
             CreateBoard();
@@ -183,12 +231,16 @@ namespace ChessProject.ViewModels
             GetSquare(0, 4).SetPiece(new ChessPiece(PieceType.King, PieceColour.Black));
             GetSquare(7, 4).SetPiece(new ChessPiece(PieceType.King, PieceColour.White));
         }
+
         #endregion
 
         #region Opening Loading
         // Load selected opening
         public void LoadOpening(Openings opening)
         {
+            IsOpeningMode = true;
+            IsGameMode = false;
+
             // Ignore null selections
             if (opening == null)
                 return;
@@ -242,6 +294,66 @@ namespace ChessProject.ViewModels
             // Notify UI that board orientation may have changed
             OnPropertyChanged(nameof(VisualSquares));
         }
+        #endregion
+
+        #region Game Loading
+        public void LoadGame(ChessGame game)
+        {
+            IsOpeningMode = false;
+            IsGameMode = true;
+
+            var moves = PgnParser.ExtractMoves(game.Pgn);
+
+            _moves = moves;
+
+            DisplayMoves.Clear();
+
+            for (int i = 0; i < _moves.Count; i++)
+            {
+                DisplayMoves.Add(new MoveViewModel(i, _moves[i]));
+            }
+
+            WhitePlayer = game.White;
+            WhiteRating = game.WhiteElo;
+
+            BlackPlayer = game.Black;
+            BlackRating = game.BlackElo;
+
+            GameResult = game.Result;
+            GameDate = game.Date;
+
+            GameTimeControl = game.TimeControl;
+
+            OnPropertyChanged(nameof(WhitePlayer));
+            OnPropertyChanged(nameof(WhiteRating));
+            OnPropertyChanged(nameof(BlackPlayer));
+            OnPropertyChanged(nameof(BlackRating));
+            OnPropertyChanged(nameof(GameResult));
+            OnPropertyChanged(nameof(GameDate));
+            OnPropertyChanged(nameof(GameTimeControl));
+
+            CurrentMoveIndex = 0;
+            SetStartingPosition();
+        }
+
+        public void LoadMovesFromPgn(string pgn)
+        {
+            var moves = Services.PgnParser.ExtractMoves(pgn);
+
+            _moves = moves;
+
+            DisplayMoves.Clear();
+
+            for (int i = 0; i < moves.Count; i++)
+            {
+                DisplayMoves.Add(new MoveViewModel(i, moves[i]));
+            }
+
+            CurrentMoveIndex = 0;
+
+            SetStartingPosition();
+        }
+
         #endregion
 
 
@@ -350,6 +462,8 @@ namespace ChessProject.ViewModels
             RebuildBoardToCurrentMove();
 
             UpdateCurrentMoveHighlight();
+
+            OnPropertyChanged(nameof(CurrentMove));
         }
 
         // Apply next move in the opening sequence
@@ -362,6 +476,8 @@ namespace ChessProject.ViewModels
             RebuildBoardToCurrentMove();
 
             UpdateCurrentMoveHighlight();
+
+            OnPropertyChanged(nameof(CurrentMove));
         }
 
         // Undo last move
@@ -374,6 +490,8 @@ namespace ChessProject.ViewModels
             RebuildBoardToCurrentMove();
 
             UpdateCurrentMoveHighlight();
+
+            OnPropertyChanged(nameof(CurrentMove));
         }
 
         // Rebuild board state from scratch up to CurrentMoveIndex
@@ -393,6 +511,19 @@ namespace ChessProject.ViewModels
         {
             bool isWhiteMove = moveIndex % 2 == 0;
             bool isCapture = move.Contains("x");
+
+            // Castling
+            if (move == "O-O" || move == "O-O+" || move == "O-O#")
+            {
+                ApplyCastle(isWhiteMove, true); // King side
+                return;
+            }
+
+            if (move == "O-O-O" || move == "O-O-O+" || move == "O-O-O#")
+            {
+                ApplyCastle(isWhiteMove, false); // Queen side
+                return;
+            }
 
             // Pawn capture
             if (move.Length == 4 && move.Contains("x") && char.IsLower(move[0]))
@@ -1040,6 +1171,48 @@ namespace ChessProject.ViewModels
             // Highlight capture squares
             kingSquare.LastMoveHighlight = LastMoveHighlightType.Capture;
             targetSquare.LastMoveHighlight = LastMoveHighlightType.Capture;
+        }
+
+        private void ApplyCastle(bool isWhite, bool kingSide)
+        {
+            int row = isWhite ? 7 : 0;
+
+            SquareViewModel kingFrom = GetSquare(row, 4);
+            SquareViewModel rookFrom;
+            SquareViewModel kingTo;
+            SquareViewModel rookTo;
+
+            if (kingSide)
+            {
+                // King side castle
+                rookFrom = GetSquare(row, 7);
+                kingTo = GetSquare(row, 6);
+                rookTo = GetSquare(row, 5);
+            }
+            else
+            {
+                // Queen side castle
+                rookFrom = GetSquare(row, 0);
+                kingTo = GetSquare(row, 2);
+                rookTo = GetSquare(row, 3);
+            }
+
+            if (!kingFrom.HasPiece || !rookFrom.HasPiece)
+                return;
+
+            ClearLastMoveHighlights();
+
+            // Move king
+            kingTo.SetPiece(kingFrom.Piece);
+            kingFrom.ClearPiece();
+
+            // Move rook
+            rookTo.SetPiece(rookFrom.Piece);
+            rookFrom.ClearPiece();
+
+            // Highlight king move
+            kingFrom.LastMoveHighlight = LastMoveHighlightType.Normal;
+            kingTo.LastMoveHighlight = LastMoveHighlightType.Normal;
         }
 
 

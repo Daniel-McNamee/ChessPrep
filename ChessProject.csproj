@@ -60,14 +60,26 @@
     </ApplicationDefinition>
     <Compile Include="Converters\BoolToArrowConverter.cs" />
     <Compile Include="Converters\BoolToVisibilityConverter.cs" />
+    <Compile Include="Models\ChessGame.cs" />
+    <Compile Include="Models\GameArchive.cs" />
+    <Compile Include="Services\ChessComService.cs" />
+    <Compile Include="Services\PgnParser.cs" />
     <Compile Include="ViewModels\BoardOrientation.cs" />
+    <Compile Include="ViewModels\GameBrowserViewModel.cs" />
     <Compile Include="ViewModels\LastMoveHighlightType.cs" />
     <Compile Include="ViewModels\MainViewModel.cs" />
     <Compile Include="ViewModels\MoveViewModel.cs" />
+    <Compile Include="Views\GameBrowserView.xaml.cs">
+      <DependentUpon>GameBrowserView.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Views\OpeningBrowserView.xaml.cs">
       <DependentUpon>OpeningBrowserView.xaml</DependentUpon>
     </Compile>
     <Page Include="Views\BoardView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Views\GameBrowserView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>

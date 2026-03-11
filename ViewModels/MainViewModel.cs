@@ -1,4 +1,5 @@
 ﻿using ChessProject.Models;
+using System.Collections.Generic;
 
 namespace ChessProject.ViewModels
 {
@@ -19,6 +20,7 @@ namespace ChessProject.ViewModels
         // Child ViewModels:
         public BoardViewModel BoardViewModel { get; } // ViewModel for the chessboard tab
         public OpeningBrowserViewModel OpeningBrowserViewModel { get; } // ViewModel for the opening browser tab
+        public GameBrowserViewModel GameBrowserViewModel { get; }
 
         // Constructors:
         public MainViewModel()
@@ -27,9 +29,11 @@ namespace ChessProject.ViewModels
 
             BoardViewModel = new BoardViewModel();
             OpeningBrowserViewModel = new OpeningBrowserViewModel();
+            GameBrowserViewModel = new GameBrowserViewModel();
 
             // Subscribe to opening selection event from browser
             OpeningBrowserViewModel.OpeningSelected += OnOpeningSelected;
+            GameBrowserViewModel.GameSelected += OnGameSelected;
         }
 
 
@@ -46,5 +50,12 @@ namespace ChessProject.ViewModels
             // Switch UI to the board tab and display the loaded opening
             SelectedTabIndex = 0;
         }
+
+        private void OnGameSelected(ChessGame game)
+        {
+            BoardViewModel.LoadGame(game);
+            SelectedTabIndex = 0;
+        }
+
     }
 }
