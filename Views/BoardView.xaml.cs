@@ -27,10 +27,19 @@ namespace ChessProject.Views
             {
                 Dispatcher.Invoke(() =>
                 {
-                    if (MoveList.SelectedItem != null)
-                        MoveList.ScrollIntoView(MoveList.SelectedItem);
+                    if (MoveList.Items.Count > 0)
+                    {
+                        var vm = DataContext as BoardViewModel;
+
+                        if (vm != null && vm.CurrentMoveIndex < MoveList.Items.Count)
+                        {
+                            MoveList.ScrollIntoView(MoveList.Items[vm.CurrentMoveIndex]);
+                        }
+                    }
                 });
             }
         }
+
+        
     }
 }
