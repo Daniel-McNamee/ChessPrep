@@ -1,10 +1,10 @@
-﻿using System;
+﻿using ChessProject.Models;
+using ChessProject.Services;
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Windows.Input;
-using ChessProject.Models;
-using ChessProject.Services;
 
 namespace ChessProject.ViewModels
 {
@@ -65,6 +65,7 @@ namespace ChessProject.ViewModels
         // Move sequence for current opening (SAN notation only)
         // Used by move application engine to rebuild board state
         private List<string> _moves = new List<string>();
+        public int TotalMoves => _moves?.Count ?? 0;
 
         public string WhitePlayer { get; private set; }
         public int WhiteRating { get; private set; }
@@ -75,7 +76,7 @@ namespace ChessProject.ViewModels
         public string GameResult { get; private set; }
         public string GameDate { get; private set; }
 
-        public string GameTimeControl { get; private set; }
+        public string GameType { get; set; }
 
 
         private bool _isOpeningMode;
@@ -297,14 +298,60 @@ namespace ChessProject.ViewModels
         #endregion
 
         #region Game Loading
+        private List<string> _clocks = new List<string>();
+
+        public string WhiteClock
+        {
+            get
+            {
+                if (_clocks == null || _clocks.Count == 0)
+                    return FormatClock(_startingTimeSeconds);
+
+                int index = CurrentMoveIndex;
+
+                if (index % 2 == 0)
+                    return _clocks[Math.Min(index, _clocks.Count - 1)];
+
+                return _clocks[Math.Max(index - 1, 0)];
+            }
+        }
+
+        public string BlackClock
+        {
+            get
+            {
+                if (_clocks == null || _clocks.Count == 0)
+                    return FormatClock(_startingTimeSeconds);
+
+                int index = CurrentMoveIndex;
+
+                if (index % 2 == 1)
+                    return _clocks[Math.Min(index, _clocks.Count - 1)];
+
+                return _clocks[Math.Max(index - 1, 0)];
+            }
+        }
+
+        private string FormatClock(int seconds)
+        {
+            int minutes = seconds / 60;
+            int remainingSeconds = seconds % 60;
+
+            return $"{minutes}:{remainingSeconds:D2}";
+        }
+
+        private int _startingTimeSeconds;
+
         public void LoadGame(ChessGame game)
         {
             IsOpeningMode = false;
             IsGameMode = true;
 
-            var moves = PgnParser.ExtractMoves(game.Pgn);
+            _startingTimeSeconds = game.StartingTimeSeconds;
 
-            _moves = moves;
+            _moves = PgnParser.ExtractMoves(game.Pgn);
+            _clocks = PgnParser.ExtractClocks(game.Pgn);
+            OnPropertyChanged(nameof(TotalMoves));
 
             DisplayMoves.Clear();
 
@@ -322,7 +369,7 @@ namespace ChessProject.ViewModels
             GameResult = game.Result;
             GameDate = game.Date;
 
-            GameTimeControl = game.TimeControl;
+            GameType = game.GameType;
 
             OnPropertyChanged(nameof(WhitePlayer));
             OnPropertyChanged(nameof(WhiteRating));
@@ -330,7 +377,9 @@ namespace ChessProject.ViewModels
             OnPropertyChanged(nameof(BlackRating));
             OnPropertyChanged(nameof(GameResult));
             OnPropertyChanged(nameof(GameDate));
-            OnPropertyChanged(nameof(GameTimeControl));
+            OnPropertyChanged(nameof(GameType));
+            OnPropertyChanged(nameof(WhiteClock));
+            OnPropertyChanged(nameof(BlackClock));
 
             CurrentMoveIndex = 0;
             SetStartingPosition();
@@ -338,16 +387,18 @@ namespace ChessProject.ViewModels
 
         public void LoadMovesFromPgn(string pgn)
         {
-            var moves = Services.PgnParser.ExtractMoves(pgn);
-
-            _moves = moves;
+            _moves = PgnParser.ExtractMoves(pgn);
+            _clocks = PgnParser.ExtractClocks(pgn);
 
             DisplayMoves.Clear();
 
-            for (int i = 0; i < moves.Count; i++)
+            for (int i = 0; i < _moves.Count; i++)
             {
-                DisplayMoves.Add(new MoveViewModel(i, moves[i]));
+                DisplayMoves.Add(new MoveViewModel(i, _moves[i]));
             }
+
+            OnPropertyChanged(nameof(WhiteClock));
+            OnPropertyChanged(nameof(BlackClock));
 
             CurrentMoveIndex = 0;
 
@@ -434,6 +485,8 @@ namespace ChessProject.ViewModels
                 // Notify UI bindings (move counter, highlights, etc.)
                 OnPropertyChanged();
                 OnPropertyChanged(nameof(CurrentMoveDisplay));
+                OnPropertyChanged(nameof(WhiteClock));
+                OnPropertyChanged(nameof(BlackClock));
 
                 // Navigation buttons depend on move position
                 (PreviousCommand as RelayCommand)?.RaiseCanExecuteChanged();

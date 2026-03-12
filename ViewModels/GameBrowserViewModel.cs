@@ -1,11 +1,9 @@
 ﻿using ChessProject.Models;
 using ChessProject.Services;
 using System;
-using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Threading.Tasks;
 using System.Windows.Input;
-using System.Linq;
 
 namespace ChessProject.ViewModels
 {

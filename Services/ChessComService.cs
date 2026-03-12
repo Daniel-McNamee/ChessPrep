@@ -16,7 +16,7 @@ namespace ChessProject.Services
 
             _client.DefaultRequestHeaders.Add(
                 "User-Agent",
-                "ChessPrepStudentProject/1.0 (contact: student@example.com)"
+                "ChessPrepStudentProject"
             );
         }
 
@@ -56,22 +56,47 @@ namespace ChessProject.Services
 
             var games = new List<ChessGame>();
 
-            foreach (var game in data["games"])
+            var gameArray = data["games"];
+            if (gameArray == null)
+                return games;
+
+            foreach (var game in gameArray)
             {
+                var pgn = game["pgn"]?.ToString() ?? "";
+
+                int whiteRating = (int?)game["white"]?["rating"] ?? 0;
+                int blackRating = (int?)game["black"]?["rating"] ?? 0;
+
+                string whiteName = game["white"]?["username"]?.ToString() ?? "Unknown";
+                string blackName = game["black"]?["username"]?.ToString() ?? "Unknown";
+
+                string result = game["white"]?["result"]?.ToString() ?? "";
+                string date = game["end_time"]?.ToString() ?? "";
+
+                int startingTime = 0;
+                var timeControlString = game["time_control"]?.ToString() ?? "0";
+
+                if (timeControlString.Contains("+"))
+                    timeControlString = timeControlString.Split('+')[0];
+
+                int.TryParse(timeControlString, out startingTime);
+
                 games.Add(new ChessGame
                 {
-                    White = game["white"]["username"].ToString(),
-                    Black = game["black"]["username"].ToString(),
+                    White = whiteName,
+                    Black = blackName,
 
-                    WhiteElo = (int)game["white"]["rating"],
-                    BlackElo = (int)game["black"]["rating"],
+                    WhiteElo = whiteRating,
+                    BlackElo = blackRating,
 
-                    Result = game["white"]["result"].ToString(),
-                    Date = game["end_time"].ToString(),
+                    Result = result,
+                    Date = date,
 
-                    TimeControl = game["time_control"].ToString(),
+                    Pgn = pgn,
 
-                    Pgn = game["pgn"].ToString()
+                    GameType = game["time_class"]?.ToString() ?? "unknown",
+
+                    StartingTimeSeconds = startingTime
                 });
             }
 
