@@ -115,6 +115,11 @@
                                Foreground="#BBBBBB"
                                Margin="0,0,0,6"/>
 
+                    <TextBlock Text="{Binding WhiteClock}"
+                               FontSize="16"
+                               Foreground="White"
+                               Margin="0,4,0,8"/>
+
                     <TextBlock Text="{Binding BlackPlayer, StringFormat=Black: {0}}"
                                Foreground="White"/>
 
@@ -122,12 +127,20 @@
                                Foreground="#BBBBBB"
                                Margin="0,0,0,10"/>
 
+                    <TextBlock Text="{Binding BlackClock}"
+                               FontSize="16"
+                               Foreground="White"
+                               Margin="0,4,0,8"/>
+
                     <TextBlock Text="{Binding GameResult, StringFormat=Result: {0}}"
                                Foreground="White"/>
 
-                    <TextBlock Text="{Binding GameTimeControl, StringFormat=Time Control: {0}}"
+                    <TextBlock Text="{Binding GameType}"
                                Foreground="White"
-                               Margin="0,0,0,16"/>
+                               FontSize="12"/>
+
+                    <TextBlock Text="{Binding TotalMoves, StringFormat=Total Moves: {0}}"
+                               Foreground="White"/>
 
                 </StackPanel>
 

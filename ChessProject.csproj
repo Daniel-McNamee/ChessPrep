@@ -63,6 +63,7 @@
     <Compile Include="Models\ChessGame.cs" />
     <Compile Include="Models\GameArchive.cs" />
     <Compile Include="Services\ChessComService.cs" />
+    <Compile Include="Services\GameTimeControlParser.cs" />
     <Compile Include="Services\PgnParser.cs" />
     <Compile Include="ViewModels\BoardOrientation.cs" />
     <Compile Include="ViewModels\GameBrowserViewModel.cs" />

@@ -8,23 +8,37 @@ namespace ChessProject.Services
     {
         public static List<string> ExtractMoves(string pgn)
         {
-            // Remove metadata lines like [Event "..."]
-            var cleaned = Regex.Replace(pgn, @"\[[^\]]*\]", "");
+            // Remove comments (including clocks)
+            string cleaned = Regex.Replace(pgn, @"\{.*?\}", "");
 
-            // Remove clock annotations {[%clk ...]}
-            cleaned = Regex.Replace(cleaned, @"\{[^}]*\}", "");
+            var lines = cleaned.Split('\n');
 
-            // Normalize whitespace
-            cleaned = cleaned.Replace("\n", " ").Replace("\r", " ");
+            string moveLine = lines.FirstOrDefault(l => l.TrimStart().StartsWith("1.")) ?? "";
 
-            var tokens = cleaned.Split(' ');
+            // Remove move numbers like "1." and "1..."
+            moveLine = Regex.Replace(moveLine, @"\d+\.(\.\.)?", "");
+
+            var tokens = moveLine.Split(' ');
 
             return tokens
                 .Where(t => !string.IsNullOrWhiteSpace(t))
-                .Where(t => !t.Contains(".")) // remove move numbers
                 .Where(t => t != "1-0" && t != "0-1" && t != "1/2-1/2")
                 .Select(t => t.Replace("+", "").Replace("#", ""))
                 .ToList();
+        }
+
+        public static List<string> ExtractClocks(string pgn)
+        {
+            var clocks = new List<string>();
+
+            var matches = Regex.Matches(pgn, @"\[%clk\s+([0-9:\.]+)\]");
+
+            foreach (Match match in matches)
+            {
+                clocks.Add(match.Groups[1].Value);
+            }
+
+            return clocks;
         }
     }
 }
