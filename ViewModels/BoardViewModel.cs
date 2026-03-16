@@ -770,11 +770,21 @@ namespace ChessProject.ViewModels
 
             ClearLastMoveHighlights();
 
+            // Replace pawn with promoted piece
             toSquare.SetPiece(new ChessPiece(newPiece, isWhite ? PieceColour.White : PieceColour.Black));
             fromSquare.ClearPiece();
 
-            fromSquare.LastMoveHighlight = LastMoveHighlightType.Normal;
-            toSquare.LastMoveHighlight = LastMoveHighlightType.Normal;
+            // Highlight move
+            if (isCapture)
+            {
+                fromSquare.LastMoveHighlight = LastMoveHighlightType.Capture;
+                toSquare.LastMoveHighlight = LastMoveHighlightType.Capture;
+            }
+            else
+            {
+                fromSquare.LastMoveHighlight = LastMoveHighlightType.Normal;
+                toSquare.LastMoveHighlight = LastMoveHighlightType.Normal;
+            }
         }
 
         private void ApplyPawnMove(string move, bool isWhite)
@@ -855,49 +865,49 @@ namespace ChessProject.ViewModels
 
         // Pawn capture logic
         private void ApplyPawnCapture(string move, bool isWhite)
-{
-    // move[0] : source file
-    // move[2] : target file
-    // move[3] : target rank
+        {
+            // move[0] : source file
+            // move[2] : target file
+            // move[3] : target rank
 
-    int sourceColumn = move[0] - 'a';
-    int targetColumn = move[2] - 'a';
-    int targetRow = 8 - int.Parse(move[3].ToString());
+            int sourceColumn = move[0] - 'a';
+            int targetColumn = move[2] - 'a';
+            int targetRow = 8 - int.Parse(move[3].ToString());
 
-    // Pawn capture always comes from one row behind target
-    int direction = isWhite ? -1 : 1;
-    int sourceRow = targetRow - direction;
+            // Pawn capture always comes from one row behind target
+            int direction = isWhite ? -1 : 1;
+            int sourceRow = targetRow - direction;
 
-    SquareViewModel fromSquare = GetSquare(sourceRow, sourceColumn);
-    SquareViewModel toSquare = GetSquare(targetRow, targetColumn);
+            SquareViewModel fromSquare = GetSquare(sourceRow, sourceColumn);
+            SquareViewModel toSquare = GetSquare(targetRow, targetColumn);
 
-    // No pawn at expected source = invalid move
-    if (!fromSquare.HasPiece)
-        return;
+            // No pawn at expected source = invalid move
+            if (!fromSquare.HasPiece)
+                return;
 
-    ClearLastMoveHighlights();
+            ClearLastMoveHighlights();
 
-    // En Passant
-    if (!toSquare.HasPiece && _enPassantTarget != null &&
-        _enPassantTarget.Row == targetRow &&
-        _enPassantTarget.Column == targetColumn)
-    {
-        int capturedPawnRow = targetRow - direction;
-        SquareViewModel capturedPawn = GetSquare(capturedPawnRow, targetColumn);
+            // En Passant
+            if (!toSquare.HasPiece && _enPassantTarget != null &&
+                _enPassantTarget.Row == targetRow &&
+                _enPassantTarget.Column == targetColumn)
+            {
+                int capturedPawnRow = targetRow - direction;
+                SquareViewModel capturedPawn = GetSquare(capturedPawnRow, targetColumn);
 
-        capturedPawn.ClearPiece();
-    }
+                capturedPawn.ClearPiece();
+            }
 
-    // Normal capture
-    toSquare.SetPiece(fromSquare.Piece);
-    fromSquare.ClearPiece();
+            // Normal capture
+            toSquare.SetPiece(fromSquare.Piece);
+            fromSquare.ClearPiece();
 
-    // Mark capture squares differently for UI styling
-    fromSquare.LastMoveHighlight = LastMoveHighlightType.Capture;
-    toSquare.LastMoveHighlight = LastMoveHighlightType.Capture;
+            // Mark capture squares differently for UI styling
+            fromSquare.LastMoveHighlight = LastMoveHighlightType.Capture;
+            toSquare.LastMoveHighlight = LastMoveHighlightType.Capture;
 
-    _enPassantTarget = null;
-}
+            _enPassantTarget = null;
+        }
 
 
 
@@ -1049,17 +1059,61 @@ namespace ChessProject.ViewModels
         // 2 = target rank (row)
         private void ApplyBishopMove(string move, bool isWhite)
         {
-            // Convert SAN target square to board coordinates
-            int targetColumn = move[1] - 'a'; // file to column index
-            int targetRow = 8 - int.Parse(move[2].ToString()); // rank to row index
+            int targetColumn;
+            int targetRow;
+            char disambiguation = '\0';
 
-            // Find the bishop of the correct colour that can legally reach target square
-            SquareViewModel bishopSquare = Squares.FirstOrDefault(s =>
+            // Convert SAN target square to board coordinates
+            // Standard bishop move (Bb5)
+            if (move.Length == 3)
+            {
+                targetColumn = move[1] - 'a'; // file to column index
+                targetRow = 8 - int.Parse(move[2].ToString()); // rank to row index
+            }
+            else
+            {
+                // Disambiguated bishop move (Bdb5, B1b5)
+                // move[1] contains file or rank identifying which bishop moves
+                disambiguation = move[1];
+                targetColumn = move[2] - 'a';
+                targetRow = 8 - int.Parse(move[3].ToString());
+            }
+
+            // Find all bishops of the correct colour that can legally reach target square
+            var possibleBishops = Squares.Where(s =>
                 s.HasPiece &&
                 s.Piece.Type == PieceType.Bishop &&
                 s.Piece.Colour == (isWhite ? PieceColour.White : PieceColour.Black) &&
                 IsDiagonalMove(s.Row, s.Column, targetRow, targetColumn) &&
-                IsPathClearDiagonal(s.Row, s.Column, targetRow, targetColumn));
+                IsPathClearDiagonal(s.Row, s.Column, targetRow, targetColumn)
+            ).ToList();
+
+            // Apply disambiguation if present
+            // SAN may specify the originating file or rank when two bishops can move to same square
+            if (disambiguation != '\0')
+            {
+                // File disambiguation (e.g. Bdb5)
+                if (disambiguation >= 'a' && disambiguation <= 'h')
+                {
+                    int fileColumn = disambiguation - 'a';
+
+                    possibleBishops = possibleBishops
+                        .Where(s => s.Column == fileColumn)
+                        .ToList();
+                }
+
+                // Rank disambiguation (e.g. B1b5)
+                if (disambiguation >= '1' && disambiguation <= '8')
+                {
+                    int rankRow = 8 - int.Parse(disambiguation.ToString());
+
+                    possibleBishops = possibleBishops
+                        .Where(s => s.Row == rankRow)
+                        .ToList();
+                }
+            }
+
+            SquareViewModel bishopSquare = possibleBishops.FirstOrDefault();
 
             if (bishopSquare == null)
                 return;
@@ -1117,13 +1171,47 @@ namespace ChessProject.ViewModels
             int targetColumn = move[2] - 'a';
             int targetRow = 8 - int.Parse(move[3].ToString());
 
-            // Find bishop that can capture on target square
-            SquareViewModel bishopSquare = Squares.FirstOrDefault(s =>
+            char disambiguation = '\0';
+
+            // Capture with disambiguation (Bdxe5, B1xe5)
+            if (move.Length == 5)
+                disambiguation = move[1];
+
+            // Find bishops that can capture on target square
+            var possibleBishops = Squares.Where(s =>
                 s.HasPiece &&
                 s.Piece.Type == PieceType.Bishop &&
                 s.Piece.Colour == (isWhite ? PieceColour.White : PieceColour.Black) &&
                 IsDiagonalMove(s.Row, s.Column, targetRow, targetColumn) &&
-                IsPathClearDiagonal(s.Row, s.Column, targetRow, targetColumn));
+                IsPathClearDiagonal(s.Row, s.Column, targetRow, targetColumn)
+            ).ToList();
+
+            // Apply disambiguation if present
+            // Used when two bishops could capture the same square
+            if (disambiguation != '\0')
+            {
+                // File disambiguation (Bdxe5)
+                if (disambiguation >= 'a' && disambiguation <= 'h')
+                {
+                    int fileColumn = disambiguation - 'a';
+
+                    possibleBishops = possibleBishops
+                        .Where(s => s.Column == fileColumn)
+                        .ToList();
+                }
+
+                // Rank disambiguation (B1xe5)
+                if (disambiguation >= '1' && disambiguation <= '8')
+                {
+                    int rankRow = 8 - int.Parse(disambiguation.ToString());
+
+                    possibleBishops = possibleBishops
+                        .Where(s => s.Row == rankRow)
+                        .ToList();
+                }
+            }
+
+            SquareViewModel bishopSquare = possibleBishops.FirstOrDefault();
 
             if (bishopSquare == null)
                 return;
@@ -1331,12 +1419,27 @@ namespace ChessProject.ViewModels
         // 2 = target rank (row)
         private void ApplyQueenMove(string move, bool isWhite)
         {
-            // Convert SAN target square to board coordinates
-            int targetColumn = move[1] - 'a'; // file to column index
-            int targetRow = 8 - int.Parse(move[2].ToString()); // rank to row index
+            int targetColumn;
+            int targetRow;
+            char disambiguation = '\0';
 
-            // Find the queen of the correct colour that can legally reach target square
-            SquareViewModel queenSquare = Squares.FirstOrDefault(s =>
+            // Convert SAN target square to board coordinates
+            // Standard queen move (Qd4)
+            if (move.Length == 3)
+            {
+                targetColumn = move[1] - 'a'; // file to column index
+                targetRow = 8 - int.Parse(move[2].ToString()); // rank to row index
+            }
+            else
+            {
+                // Disambiguated queen move (Qhd4, Q1d4)
+                disambiguation = move[1];
+                targetColumn = move[2] - 'a';
+                targetRow = 8 - int.Parse(move[3].ToString());
+            }
+
+            // Find all queens of the correct colour that can legally reach target square
+            var possibleQueens = Squares.Where(s =>
                 s.HasPiece &&
                 s.Piece.Type == PieceType.Queen &&
                 s.Piece.Colour == (isWhite ? PieceColour.White : PieceColour.Black) &&
@@ -1348,7 +1451,34 @@ namespace ChessProject.ViewModels
                     (IsStraightMove(s.Row, s.Column, targetRow, targetColumn) &&
                      IsPathClearStraight(s.Row, s.Column, targetRow, targetColumn))
                 )
-            );
+            ).ToList();
+
+            // Apply disambiguation if present
+            // SAN may specify file or rank when two queens could move to the same square
+            if (disambiguation != '\0')
+            {
+                // File disambiguation (Qhd4)
+                if (disambiguation >= 'a' && disambiguation <= 'h')
+                {
+                    int fileColumn = disambiguation - 'a';
+
+                    possibleQueens = possibleQueens
+                        .Where(s => s.Column == fileColumn)
+                        .ToList();
+                }
+
+                // Rank disambiguation (Q1d4)
+                if (disambiguation >= '1' && disambiguation <= '8')
+                {
+                    int rankRow = 8 - int.Parse(disambiguation.ToString());
+
+                    possibleQueens = possibleQueens
+                        .Where(s => s.Row == rankRow)
+                        .ToList();
+                }
+            }
+
+            SquareViewModel queenSquare = possibleQueens.FirstOrDefault();
 
             if (queenSquare == null)
                 return;
@@ -1378,8 +1508,14 @@ namespace ChessProject.ViewModels
             int targetColumn = move[2] - 'a';
             int targetRow = 8 - int.Parse(move[3].ToString());
 
-            // Find the queen that can capture on target square
-            SquareViewModel queenSquare = Squares.FirstOrDefault(s =>
+            char disambiguation = '\0';
+
+            // Capture with disambiguation (Qdxe4, Q1xe4)
+            if (move.Length == 5)
+                disambiguation = move[1];
+
+            // Find queens that can capture on target square
+            var possibleQueens = Squares.Where(s =>
                 s.HasPiece &&
                 s.Piece.Type == PieceType.Queen &&
                 s.Piece.Colour == (isWhite ? PieceColour.White : PieceColour.Black) &&
@@ -1390,7 +1526,33 @@ namespace ChessProject.ViewModels
                     (IsStraightMove(s.Row, s.Column, targetRow, targetColumn) &&
                      IsPathClearStraight(s.Row, s.Column, targetRow, targetColumn))
                 )
-            );
+            ).ToList();
+
+            // Apply disambiguation if present
+            if (disambiguation != '\0')
+            {
+                // File disambiguation (Qdxe4)
+                if (disambiguation >= 'a' && disambiguation <= 'h')
+                {
+                    int fileColumn = disambiguation - 'a';
+
+                    possibleQueens = possibleQueens
+                        .Where(s => s.Column == fileColumn)
+                        .ToList();
+                }
+
+                // Rank disambiguation (Q1xe4)
+                if (disambiguation >= '1' && disambiguation <= '8')
+                {
+                    int rankRow = 8 - int.Parse(disambiguation.ToString());
+
+                    possibleQueens = possibleQueens
+                        .Where(s => s.Row == rankRow)
+                        .ToList();
+                }
+            }
+
+            SquareViewModel queenSquare = possibleQueens.FirstOrDefault();
 
             if (queenSquare == null)
                 return;
