@@ -65,6 +65,7 @@ namespace ChessProject.ViewModels
         // Move sequence for current opening (SAN notation only)
         // Used by move application engine to rebuild board state
         private List<string> _moves = new List<string>();
+        private SquareViewModel _enPassantTarget;
         public int TotalMoves => _moves?.Count ?? 0;
 
         public string WhitePlayer { get; private set; }
@@ -562,8 +563,17 @@ namespace ChessProject.ViewModels
         // Parse SAN move string and route to correct piece logic
         private void ApplyMove(string move, int moveIndex)
         {
+            move = move.Replace("+", "").Replace("#", "");
+
             bool isWhiteMove = moveIndex % 2 == 0;
             bool isCapture = move.Contains("x");
+
+            // Pawn promotion (including capture promotions)
+            if (move.Contains("="))
+            {
+                ApplyPawnPromotion(move, isWhiteMove);
+                return;
+            }
 
             // Castling
             if (move == "O-O" || move == "O-O+" || move == "O-O#")
@@ -661,6 +671,8 @@ namespace ChessProject.ViewModels
                 ApplyKingMove(move, isWhiteMove);
                 return;
             }
+
+            System.Diagnostics.Debug.WriteLine("Applying move: " + move);
         }
 
         #endregion
@@ -683,6 +695,88 @@ namespace ChessProject.ViewModels
 
 
         // Pawn move logic (supports one and two square advances)
+        private void ApplyPawnPromotion(string move, bool isWhite)
+        {
+            bool isCapture = move.Contains("x");
+
+            char promotionPiece = move.Last();
+
+            PieceType newPiece;
+
+            switch (promotionPiece)
+            {
+                case 'Q':
+                    newPiece = PieceType.Queen;
+                    break;
+
+                case 'R':
+                    newPiece = PieceType.Rook;
+                    break;
+
+                case 'B':
+                    newPiece = PieceType.Bishop;
+                    break;
+
+                case 'N':
+                    newPiece = PieceType.Knight;
+                    break;
+
+                default:
+                    newPiece = PieceType.Queen;
+                    break;
+            }
+
+            int targetColumn;
+            int targetRow;
+
+            if (isCapture)
+            {
+                // Example: bxa8=Q
+                targetColumn = move[2] - 'a';
+                targetRow = 8 - int.Parse(move[3].ToString());
+            }
+            else
+            {
+                // Example: e8=Q
+                targetColumn = move[0] - 'a';
+                targetRow = 8 - int.Parse(move[1].ToString());
+            }
+
+            int direction = isWhite ? -1 : 1;
+
+            int sourceRow = targetRow - direction;
+
+            int sourceColumn;
+
+            if (isCapture)
+            {
+                // Pawn comes from the file specified before 'x'
+                sourceColumn = move[0] - 'a';
+            }
+            else
+            {
+                // Pawn comes from same file
+                sourceColumn = targetColumn;
+            }
+
+            SquareViewModel fromSquare = GetSquare(sourceRow, sourceColumn);
+
+            if (!fromSquare.HasPiece ||
+                fromSquare.Piece.Type != PieceType.Pawn ||
+                fromSquare.Piece.Colour != (isWhite ? PieceColour.White : PieceColour.Black))
+                return;
+
+            SquareViewModel toSquare = GetSquare(targetRow, targetColumn);
+
+            ClearLastMoveHighlights();
+
+            toSquare.SetPiece(new ChessPiece(newPiece, isWhite ? PieceColour.White : PieceColour.Black));
+            fromSquare.ClearPiece();
+
+            fromSquare.LastMoveHighlight = LastMoveHighlightType.Normal;
+            toSquare.LastMoveHighlight = LastMoveHighlightType.Normal;
+        }
+
         private void ApplyPawnMove(string move, bool isWhite)
         {
             // Convert file letter to column index (a=0 … h=7)
@@ -724,6 +818,17 @@ namespace ChessProject.ViewModels
             toSquare.SetPiece(fromSquare.Piece);
             fromSquare.ClearPiece();
 
+            // Detect double pawn advance (en passant opportunity)
+            if (Math.Abs(targetRow - fromSquare.Row) == 2)
+            {
+                int enPassantRow = (targetRow + fromSquare.Row) / 2;
+                _enPassantTarget = GetSquare(enPassantRow, targetColumn);
+            }
+            else
+            {
+                _enPassantTarget = null;
+            }
+
             // Mark origin and destination as last move squares
             fromSquare.LastMoveHighlight = LastMoveHighlightType.Normal;
             toSquare.LastMoveHighlight = LastMoveHighlightType.Normal;
@@ -750,53 +855,100 @@ namespace ChessProject.ViewModels
 
         // Pawn capture logic
         private void ApplyPawnCapture(string move, bool isWhite)
-        {
-            // move[0] : source file
-            // move[2] : target file
-            // move[3] : target rank
-            int sourceColumn = move[0] - 'a';
-            int targetColumn = move[2] - 'a';
-            int targetRow = 8 - int.Parse(move[3].ToString());
+{
+    // move[0] : source file
+    // move[2] : target file
+    // move[3] : target rank
 
-            // Pawn capture always comes from one row behind target
-            int direction = isWhite ? -1 : 1;
-            int sourceRow = targetRow - direction;
+    int sourceColumn = move[0] - 'a';
+    int targetColumn = move[2] - 'a';
+    int targetRow = 8 - int.Parse(move[3].ToString());
 
-            SquareViewModel fromSquare = GetSquare(sourceRow, sourceColumn);
-            SquareViewModel toSquare = GetSquare(targetRow, targetColumn);
+    // Pawn capture always comes from one row behind target
+    int direction = isWhite ? -1 : 1;
+    int sourceRow = targetRow - direction;
 
-            // No pawn at expected source = invalid move
-            if (!fromSquare.HasPiece)
-                return;
+    SquareViewModel fromSquare = GetSquare(sourceRow, sourceColumn);
+    SquareViewModel toSquare = GetSquare(targetRow, targetColumn);
 
-            ClearLastMoveHighlights();
+    // No pawn at expected source = invalid move
+    if (!fromSquare.HasPiece)
+        return;
 
-            // Capture piece
-            toSquare.SetPiece(fromSquare.Piece);
-            fromSquare.ClearPiece();
+    ClearLastMoveHighlights();
 
-            // Mark capture squares differently for UI styling
-            fromSquare.LastMoveHighlight = LastMoveHighlightType.Capture;
-            toSquare.LastMoveHighlight = LastMoveHighlightType.Capture;
-        }
+    // En Passant
+    if (!toSquare.HasPiece && _enPassantTarget != null &&
+        _enPassantTarget.Row == targetRow &&
+        _enPassantTarget.Column == targetColumn)
+    {
+        int capturedPawnRow = targetRow - direction;
+        SquareViewModel capturedPawn = GetSquare(capturedPawnRow, targetColumn);
+
+        capturedPawn.ClearPiece();
+    }
+
+    // Normal capture
+    toSquare.SetPiece(fromSquare.Piece);
+    fromSquare.ClearPiece();
+
+    // Mark capture squares differently for UI styling
+    fromSquare.LastMoveHighlight = LastMoveHighlightType.Capture;
+    toSquare.LastMoveHighlight = LastMoveHighlightType.Capture;
+
+    _enPassantTarget = null;
+}
 
 
 
         // Knight move logic
         private void ApplyKnightMove(string move, bool isWhite)
         {
-            // move[1] : target file
-            // move[2] : target rank
+            int targetColumn;
+            int targetRow;
+            char disambiguation = '\0';
 
-            int targetColumn = move[1] - 'a';
-            int targetRow = 8 - int.Parse(move[2].ToString());
+            // Determine target square
+            if (move.Length == 3)
+            {
+                targetColumn = move[1] - 'a';
+                targetRow = 8 - int.Parse(move[2].ToString());
+            }
+            else
+            {
+                disambiguation = move[1];
+                targetColumn = move[2] - 'a';
+                targetRow = 8 - int.Parse(move[3].ToString());
+            }
 
-            // Find the knight of the correct colour that can legally reach the target square
-            SquareViewModel knightSquare = Squares.FirstOrDefault(s =>
+            // Find all knights that could reach the square
+            var possibleKnights = Squares.Where(s =>
                 s.HasPiece &&
                 s.Piece.Type == PieceType.Knight &&
                 s.Piece.Colour == (isWhite ? PieceColour.White : PieceColour.Black) &&
-                IsKnightMove(s.Row, s.Column, targetRow, targetColumn));
+                IsKnightMove(s.Row, s.Column, targetRow, targetColumn)
+            ).ToList();
+
+            // Apply disambiguation if present
+            if (disambiguation != '\0')
+            {
+                if (disambiguation >= 'a' && disambiguation <= 'h')
+                {
+                    int fileColumn = disambiguation - 'a';
+                    possibleKnights = possibleKnights
+                        .Where(s => s.Column == fileColumn)
+                        .ToList();
+                }
+                else if (disambiguation >= '1' && disambiguation <= '8')
+                {
+                    int rankRow = 8 - int.Parse(disambiguation.ToString());
+                    possibleKnights = possibleKnights
+                        .Where(s => s.Row == rankRow)
+                        .ToList();
+                }
+            }
+
+            SquareViewModel knightSquare = possibleKnights.FirstOrDefault();
 
             if (knightSquare == null)
                 return;
@@ -828,18 +980,52 @@ namespace ChessProject.ViewModels
         // Knight capture logic
         private void ApplyKnightCapture(string move, bool isWhite)
         {
-            // move[2] : target file
-            // move[3] : target rank
+            int targetColumn;
+            int targetRow;
+            char disambiguation = '\0';
 
-            int targetColumn = move[2] - 'a';
-            int targetRow = 8 - int.Parse(move[3].ToString());
+            // Standard capture (Nxf6)
+            if (move.Length == 4)
+            {
+                targetColumn = move[2] - 'a';
+                targetRow = 8 - int.Parse(move[3].ToString());
+            }
+            else
+            {
+                // Disambiguated capture (Nbxf6 or N1xf6)
+                disambiguation = move[1];
+                targetColumn = move[3] - 'a';
+                targetRow = 8 - int.Parse(move[4].ToString());
+            }
 
-            // Find the knight of the correct colour that can legally capture on the target square
-            SquareViewModel knightSquare = Squares.FirstOrDefault(s =>
+            // Find all knights that could capture on target square
+            var possibleKnights = Squares.Where(s =>
                 s.HasPiece &&
                 s.Piece.Type == PieceType.Knight &&
                 s.Piece.Colour == (isWhite ? PieceColour.White : PieceColour.Black) &&
-                IsKnightMove(s.Row, s.Column, targetRow, targetColumn));
+                IsKnightMove(s.Row, s.Column, targetRow, targetColumn)
+            ).ToList();
+
+            // Apply disambiguation if present
+            if (disambiguation != '\0')
+            {
+                if (disambiguation >= 'a' && disambiguation <= 'h')
+                {
+                    int fileColumn = disambiguation - 'a';
+                    possibleKnights = possibleKnights
+                        .Where(s => s.Column == fileColumn)
+                        .ToList();
+                }
+                else if (disambiguation >= '1' && disambiguation <= '8')
+                {
+                    int rankRow = 8 - int.Parse(disambiguation.ToString());
+                    possibleKnights = possibleKnights
+                        .Where(s => s.Row == rankRow)
+                        .ToList();
+                }
+            }
+
+            SquareViewModel knightSquare = possibleKnights.FirstOrDefault();
 
             if (knightSquare == null)
                 return;
@@ -962,19 +1148,62 @@ namespace ChessProject.ViewModels
         // 0 = piece ('R')
         // 1 = target file (column)
         // 2 = target rank (row)
+        // Rook move logic
+        // 0 = piece ('R')
+        // 1 = target file (column)
+        // 2 = target rank (row)
         private void ApplyRookMove(string move, bool isWhite)
         {
-            // Convert SAN target square to board coordinates
-            int targetColumn = move[1] - 'a'; // file to column index
-            int targetRow = 8 - int.Parse(move[2].ToString()); // rank to row index
+            int targetColumn;
+            int targetRow;
+            char disambiguation = '\0';
 
-            // Find the rook of the correct colour that can legally reach target square
-            SquareViewModel rookSquare = Squares.FirstOrDefault(s =>
+            // Standard rook move (Rd1)
+            if (move.Length == 3)
+            {
+                targetColumn = move[1] - 'a'; // file to column index
+                targetRow = 8 - int.Parse(move[2].ToString()); // rank to row index
+            }
+            else
+            {
+                // Disambiguated rook move (Rad1, R1d1)
+                disambiguation = move[1];
+                targetColumn = move[2] - 'a';
+                targetRow = 8 - int.Parse(move[3].ToString());
+            }
+
+            // Find all rooks of the correct colour that can legally reach target square
+            var possibleRooks = Squares.Where(s =>
                 s.HasPiece &&
                 s.Piece.Type == PieceType.Rook &&
                 s.Piece.Colour == (isWhite ? PieceColour.White : PieceColour.Black) &&
                 IsStraightMove(s.Row, s.Column, targetRow, targetColumn) &&
-                IsPathClearStraight(s.Row, s.Column, targetRow, targetColumn));
+                IsPathClearStraight(s.Row, s.Column, targetRow, targetColumn)
+            ).ToList();
+
+            // Apply disambiguation filter if present
+            if (disambiguation != '\0')
+            {
+                // File disambiguation (Rad1)
+                if (disambiguation >= 'a' && disambiguation <= 'h')
+                {
+                    int fileColumn = disambiguation - 'a';
+                    possibleRooks = possibleRooks
+                        .Where(s => s.Column == fileColumn)
+                        .ToList();
+                }
+
+                // Rank disambiguation (R1d1)
+                if (disambiguation >= '1' && disambiguation <= '8')
+                {
+                    int rankRow = 8 - int.Parse(disambiguation.ToString());
+                    possibleRooks = possibleRooks
+                        .Where(s => s.Row == rankRow)
+                        .ToList();
+                }
+            }
+
+            SquareViewModel rookSquare = possibleRooks.FirstOrDefault();
 
             if (rookSquare == null)
                 return;
@@ -1024,28 +1253,64 @@ namespace ChessProject.ViewModels
 
         // Rook capture logic
         // 0 = piece ('R')
-        // 1 = capture marker ('x')
+        // 1 = capture marker ('x') OR disambiguation
         // 2 = target file
         // 3 = target rank
         private void ApplyRookCapture(string move, bool isWhite)
         {
-            // Convert SAN target square to board coordinates
-            int targetColumn = move[2] - 'a';
-            int targetRow = 8 - int.Parse(move[3].ToString());
+            int targetColumn;
+            int targetRow;
+            char disambiguation = '\0';
 
-            // Find rook that can capture on target square
-            SquareViewModel rookSquare = Squares.FirstOrDefault(s =>
+            // Standard capture (Rxd1)
+            if (move.Length == 4)
+            {
+                targetColumn = move[2] - 'a';
+                targetRow = 8 - int.Parse(move[3].ToString());
+            }
+            else
+            {
+                // Disambiguated capture (Raxd1 or R1xd1)
+                disambiguation = move[1];
+                targetColumn = move[3] - 'a';
+                targetRow = 8 - int.Parse(move[4].ToString());
+            }
+
+            // Find all rooks that could capture on target square
+            var possibleRooks = Squares.Where(s =>
                 s.HasPiece &&
                 s.Piece.Type == PieceType.Rook &&
                 s.Piece.Colour == (isWhite ? PieceColour.White : PieceColour.Black) &&
                 IsStraightMove(s.Row, s.Column, targetRow, targetColumn) &&
-                IsPathClearStraight(s.Row, s.Column, targetRow, targetColumn));
+                IsPathClearStraight(s.Row, s.Column, targetRow, targetColumn)
+            ).ToList();
+
+            // Apply disambiguation if present
+            if (disambiguation != '\0')
+            {
+                if (disambiguation >= 'a' && disambiguation <= 'h')
+                {
+                    int fileColumn = disambiguation - 'a';
+                    possibleRooks = possibleRooks
+                        .Where(s => s.Column == fileColumn)
+                        .ToList();
+                }
+                else if (disambiguation >= '1' && disambiguation <= '8')
+                {
+                    int rankRow = 8 - int.Parse(disambiguation.ToString());
+                    possibleRooks = possibleRooks
+                        .Where(s => s.Row == rankRow)
+                        .ToList();
+                }
+            }
+
+            SquareViewModel rookSquare = possibleRooks.FirstOrDefault();
 
             if (rookSquare == null)
                 return;
 
             SquareViewModel targetSquare = GetSquare(targetRow, targetColumn);
-
+            
             // Remove previous move highlight
             ClearLastMoveHighlights();
 
