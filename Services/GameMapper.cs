@@ -17,7 +17,7 @@ namespace ChessProject.Services
                 Result = game.Result,
                 PGN = game.Pgn,
                 TimeControl = game.GameType,
-                Date = DateTime.Now,
+                DateSaved = DateTime.Now,
                 IsFavourite = false
             };
         }

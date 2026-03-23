@@ -1,11 +1,14 @@
 ﻿using ChessProject.Data;
+using ChessProject.Entities;
 using ChessProject.Models;
 using ChessProject.Services;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
+using System.Threading.Tasks;
 using System.Windows.Input;
+using System.Windows.Media;
 
 namespace ChessProject.ViewModels
 {
@@ -34,6 +37,7 @@ namespace ChessProject.ViewModels
         public ICommand NextCommand { get; }
         public ICommand PreviousCommand { get; }
         public ICommand FlipBoardCommand { get; }
+        public ICommand SaveGameCommand { get; }
 
 
         // Opening Information (displayed in side panel)
@@ -79,6 +83,8 @@ namespace ChessProject.ViewModels
         public string GameDate { get; private set; }
 
         public string GameType { get; set; }
+
+        private ChessGame _currentGame;
 
 
         private bool _isOpeningMode;
@@ -133,6 +139,7 @@ namespace ChessProject.ViewModels
             NextCommand = new RelayCommand(NextMove, () => CurrentMoveIndex < _moves.Count);
             PreviousCommand = new RelayCommand(PreviousMove, () => CurrentMoveIndex > 0);
             FlipBoardCommand = new RelayCommand(FlipBoard);
+            SaveGameCommand = new RelayCommand(SaveGame);
 
             // Initialize move list displayed in side panel
             DisplayMoves = new ObservableCollection<MoveViewModel>();
@@ -348,6 +355,7 @@ namespace ChessProject.ViewModels
         {
             IsOpeningMode = false;
             IsGameMode = true;
+            _currentGame = game;
 
             _startingTimeSeconds = game.StartingTimeSeconds;
 
@@ -478,6 +486,79 @@ namespace ChessProject.ViewModels
                 : BoardOrientation.WhiteBottom;
         }
 
+        #endregion
+
+        #region Save Game
+        private async void SaveGame()
+        {
+            if (_currentGame == null)
+            {
+                StatusColor = Brushes.Red;
+                StatusMessage = "No game loaded.";
+                await ClearStatusMessage();
+                return;
+            }
+
+            using (var db = new ChessDbContext())
+            {
+                var existing = db.Games.FirstOrDefault(g => g.PGN == _currentGame.Pgn);
+
+                if (existing != null)
+                {
+                    StatusColor = Brushes.Orange;
+                    StatusMessage = "Game already saved.";
+                    await ClearStatusMessage();
+                    return;
+                }
+
+                var entity = new GameEntity
+                {
+                    WhitePlayer = _currentGame.White,
+                    BlackPlayer = _currentGame.Black,
+                    WhiteElo = _currentGame.WhiteElo,
+                    BlackElo = _currentGame.BlackElo,
+                    Result = _currentGame.Result,
+                    TimeControl = _currentGame.GameType,
+                    PGN = _currentGame.Pgn,
+                    DateSaved = DateTime.Now
+                };
+
+                db.Games.Add(entity);
+                db.SaveChanges();
+            }
+            StatusColor = Brushes.LightGreen;
+            StatusMessage = "Game saved successfully.";
+            await ClearStatusMessage();
+        }
+
+        private string _statusMessage;
+        public string StatusMessage
+        {
+            get => _statusMessage;
+            set
+            {
+                _statusMessage = value;
+                OnPropertyChanged();
+            }
+        }
+
+        private Brush _statusColor = Brushes.LightGreen;
+        public Brush StatusColor
+        {
+            get => _statusColor;
+            set
+            {
+                _statusColor = value;
+                OnPropertyChanged();
+            }
+        }
+
+        private async Task ClearStatusMessage()
+        {
+            await Task.Delay(2500);
+            StatusMessage = "";
+            StatusColor = Brushes.LightGreen;
+        }
         #endregion
 
 

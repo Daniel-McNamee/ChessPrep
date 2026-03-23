@@ -20,7 +20,7 @@ namespace ChessProject.Entities
 
         public string PGN { get; set; }
 
-        public DateTime Date { get; set; }
+        public DateTime DateSaved { get; set; }
 
         public string TimeControl { get; set; }
 

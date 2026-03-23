@@ -73,7 +73,7 @@
     <Compile Include="Data\DbContext.cs" />
     <Compile Include="Entities\FavouritePlayerEntity.cs" />
     <Compile Include="Entities\GameEntity.cs" />
-    <Compile Include="Entities\LocalGame.cs" />
+    <Compile Include="Entities\LocalGameEntity.cs" />
     <Compile Include="Entities\MoveNoteEntity.cs" />
     <Compile Include="Entities\OpeningEntity.cs" />
     <Compile Include="Entities\RecentGameEntity.cs" />
@@ -85,6 +85,10 @@
     <Compile Include="Migrations\202603231102387_AddRecentGames.cs" />
     <Compile Include="Migrations\202603231102387_AddRecentGames.Designer.cs">
       <DependentUpon>202603231102387_AddRecentGames.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Migrations\202603231228063_RenameDateToDateSaved.cs" />
+    <Compile Include="Migrations\202603231228063_RenameDateToDateSaved.Designer.cs">
+      <DependentUpon>202603231228063_RenameDateToDateSaved.cs</DependentUpon>
     </Compile>
     <Compile Include="Migrations\Configuration.cs" />
     <Compile Include="Models\ChessGame.cs" />
@@ -159,6 +163,9 @@
     </EmbeddedResource>
     <EmbeddedResource Include="Migrations\202603231102387_AddRecentGames.resx">
       <DependentUpon>202603231102387_AddRecentGames.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Migrations\202603231228063_RenameDateToDateSaved.resx">
+      <DependentUpon>202603231228063_RenameDateToDateSaved.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="Properties\Resources.resx">
       <Generator>ResXFileCodeGenerator</Generator>

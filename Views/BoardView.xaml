@@ -224,6 +224,17 @@
 
                 </ListBox>
 
+                <!-- Save Game Button -->
+                <Button Content="Save Game"
+                        Width="100"
+                        Margin="5"
+                        Command="{Binding SaveGameCommand}"/>
+
+                <TextBlock Text="{Binding StatusMessage}"
+                           Foreground="{Binding StatusColor}"
+                           FontWeight="Bold"
+                           Margin="0,10,0,0"/>
+
 
                 <!-- OPENING STATISTICS -->
                 <StackPanel Visibility="{Binding IsOpeningMode, Converter={StaticResource BoolToVisibilityConverter}}">
