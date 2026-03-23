@@ -433,6 +433,18 @@ namespace ChessProject.ViewModels
                 }
 
                 db.SaveChanges();
+
+                // Limit recent games to 20
+                var oldGames = db.RecentGames
+                    .OrderByDescending(g => g.DateViewed)
+                    .Skip(20)
+                    .ToList();
+
+                if (oldGames.Any())
+                {
+                    db.RecentGames.RemoveRange(oldGames);
+                    db.SaveChanges();
+                }
             }
         }
 
@@ -493,7 +505,7 @@ namespace ChessProject.ViewModels
         {
             if (_currentGame == null)
             {
-                StatusColor = Brushes.Red;
+                StatusColor = Brushes.Orange;
                 StatusMessage = "No game loaded.";
                 await ClearStatusMessage();
                 return;
