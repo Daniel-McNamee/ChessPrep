@@ -1,7 +1,10 @@
-﻿using ChessProject.Models;
+﻿using ChessProject.Data;
+using ChessProject.Models;
 using ChessProject.Services;
 using System;
 using System.Collections.ObjectModel;
+using System.Linq;
+using System.Security.Cryptography;
 using System.Threading.Tasks;
 using System.Windows.Input;
 
@@ -12,12 +15,18 @@ namespace ChessProject.ViewModels
         private readonly ChessComService _service;
 
         public ObservableCollection<GameArchive> Archives { get; }
+        public ObservableCollection<ChessGame> OnlineGames { get; set; }
+        public ObservableCollection<ChessGame> SavedGames { get; set; }
+        public ObservableCollection<ChessGame> RecentGames { get; set; }
 
-        public ObservableCollection<ChessGame> Games { get; }
+        public ObservableCollection<ChessGame> DisplayGames { get; set; }
 
         public ICommand SearchPlayerCommand { get; }
 
         public ICommand LoadArchiveCommand { get; }
+        public ICommand ShowOnlineCommand { get; }
+        public ICommand ShowSavedCommand { get; }
+        public ICommand ShowRecentCommand { get; }
 
         public event Action<ChessGame> GameSelected;
 
@@ -59,6 +68,31 @@ namespace ChessProject.ViewModels
             }
         }
 
+        private void ShowOnlineGames()
+        {
+            DisplayGames.Clear();
+            foreach (var game in OnlineGames)
+                DisplayGames.Add(game);
+        }
+
+        private void ShowSavedGames()
+        {
+            LoadSavedGames();
+
+            DisplayGames.Clear();
+            foreach (var game in SavedGames)
+                DisplayGames.Add(game);
+        }
+
+        private void ShowRecentGames()
+        {
+            LoadRecentGames();
+
+            DisplayGames.Clear();
+            foreach (var game in RecentGames)
+                DisplayGames.Add(game);
+        }
+
         private void LoadSelectedGame()
         {
             if (SelectedGame == null)
@@ -67,16 +101,50 @@ namespace ChessProject.ViewModels
             GameSelected?.Invoke(SelectedGame);
         }
 
+        private void LoadSavedGames()
+        {
+            using (var db = new ChessDbContext())
+            {
+                SavedGames.Clear();
+
+                var games = db.Games.ToList();
+
+                foreach (var game in games)
+                    SavedGames.Add(GameMapper.ToModel(game));
+            }
+        }
+        private void LoadRecentGames()
+        {
+            using (var db = new ChessDbContext())
+            {
+                RecentGames.Clear();
+
+                var games = db.RecentGames
+                    .OrderByDescending(g => g.DateViewed)
+                    .ToList();
+
+                foreach (var game in games)
+                    RecentGames.Add(GameMapper.ToModel(game));
+            }
+        }
+
         public GameBrowserViewModel()
         {
             _service = new ChessComService();
 
             Archives = new ObservableCollection<GameArchive>();
-            Games = new ObservableCollection<ChessGame>();
+
+            OnlineGames = new ObservableCollection<ChessGame>();
+            SavedGames = new ObservableCollection<ChessGame>();
+            RecentGames = new ObservableCollection<ChessGame>();
+            DisplayGames = new ObservableCollection<ChessGame>();
 
             SearchPlayerCommand = new RelayCommand(async () => await SearchPlayer());
-
             LoadArchiveCommand = new RelayCommand(async () => await LoadArchive());
+
+            ShowOnlineCommand = new RelayCommand(ShowOnlineGames);
+            ShowSavedCommand = new RelayCommand(ShowSavedGames);
+            ShowRecentCommand = new RelayCommand(ShowRecentGames);
         }
 
         private async Task SearchPlayer()
@@ -108,13 +176,15 @@ namespace ChessProject.ViewModels
 
         private async Task LoadArchive()
         {
-            Games.Clear();
+            OnlineGames.Clear();
+            DisplayGames.Clear();
 
             var games = await _service.GetGamesFromArchive(SelectedArchive.Url);
 
             foreach (var game in games)
             {
-                Games.Add(game);
+                OnlineGames.Add(game);
+                DisplayGames.Add(game);
             }
         }
     }

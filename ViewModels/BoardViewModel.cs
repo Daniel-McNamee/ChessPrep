@@ -1,4 +1,5 @@
-﻿using ChessProject.Models;
+﻿using ChessProject.Data;
+using ChessProject.Models;
 using ChessProject.Services;
 using System;
 using System.Collections.Generic;
@@ -381,6 +382,7 @@ namespace ChessProject.ViewModels
             OnPropertyChanged(nameof(GameType));
             OnPropertyChanged(nameof(WhiteClock));
             OnPropertyChanged(nameof(BlackClock));
+            AddToRecentGames(game);
 
             CurrentMoveIndex = 0;
             SetStartingPosition();
@@ -404,6 +406,26 @@ namespace ChessProject.ViewModels
             CurrentMoveIndex = 0;
 
             SetStartingPosition();
+        }
+
+        private void AddToRecentGames(ChessGame game)
+        {
+            using (var db = new ChessDbContext())
+            {
+                var existing = db.RecentGames
+                    .FirstOrDefault(g => g.PGN == game.Pgn);
+
+                if (existing != null)
+                {
+                    existing.DateViewed = DateTime.Now;
+                }
+                else
+                {
+                    db.RecentGames.Add(GameMapper.ToRecentEntity(game));
+                }
+
+                db.SaveChanges();
+            }
         }
 
         #endregion

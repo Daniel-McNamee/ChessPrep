@@ -21,20 +21,42 @@
                        Margin="0,0,0,12"/>
 
             <!-- Search -->
-            <StackPanel Grid.Row="1"
-                        Orientation="Horizontal"
-                        Margin="0,0,0,12">
+            <Grid Grid.Row="1" Margin="0,0,0,12">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="200"/>
+                    <ColumnDefinition Width="134"/>
+                    <ColumnDefinition Width="6"/>
+                    <ColumnDefinition Width="110"/>
+                    <ColumnDefinition Width="110"/>
+                    <ColumnDefinition Width="110"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
 
-                <TextBox Width="200"
-                         Margin="0,0,12,0"
+                <TextBox Grid.Column="0"
+                         Margin="0,0,10,0"
                          Text="{Binding Username}"
                          ToolTip="Enter Chess.com username"/>
 
-                <Button Content="Search"
-                        Width="100"
-                        Command="{Binding SearchPlayerCommand}"/>
+                <Button Grid.Column="1"
+                        Content="Search"
+                        Command="{Binding SearchPlayerCommand}"
+                        Width="134"
+                        Margin="0,0,10,0"/>
 
-            </StackPanel>
+                <Button Grid.Column="3"
+                        Content="Online"
+                        Command="{Binding ShowOnlineCommand}"
+                        Margin="0,0,10,0"/>
+
+                <Button Grid.Column="4"
+                        Content="Saved"
+                        Command="{Binding ShowSavedCommand}"
+                        Margin="0,0,10,0"/>
+
+                <Button Grid.Column="5"
+                        Content="Recent"
+                        Command="{Binding ShowRecentCommand}"/>
+            </Grid>
 
             <!-- Archives + Games -->
             <Grid Grid.Row="2">
@@ -72,7 +94,7 @@
                                Foreground="White"
                                Margin="0,0,0,8"/>
 
-                    <ListBox ItemsSource="{Binding Games}"
+                    <ListBox ItemsSource="{Binding DisplayGames}"
                              SelectedItem="{Binding SelectedGame}"
                              Height="400">
 
