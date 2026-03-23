@@ -54,6 +54,16 @@
                     </ComboBox.ItemsSource>
                 </ComboBox>
 
+                <Button Content="Search Results"
+                        Width="120"
+                        Margin="12,0,0,0"
+                        Command="{Binding SearchOpeningsCommand}"/>
+
+                <Button Content="Favourites"
+                        Width="120"
+                        Margin="12,0,0,0"
+                        Command="{Binding ShowFavouriteOpeningsCommand}"/>
+
             </StackPanel>
 
             <!-- Openings List -->

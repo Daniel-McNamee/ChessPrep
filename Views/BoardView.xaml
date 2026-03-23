@@ -225,10 +225,17 @@
                 </ListBox>
 
                 <!-- Save Game Button -->
-                <Button Content="Save Game"
+                <Button Content="💾 Save Game"
+                        Visibility="{Binding IsGameMode, Converter={StaticResource BoolToVisibilityConverter}}"
                         Width="100"
                         Margin="5"
                         Command="{Binding SaveGameCommand}"/>
+
+                <Button Content="★ Favourite Opening"
+                        Visibility="{Binding IsOpeningMode, Converter={StaticResource BoolToVisibilityConverter}}"
+                        Command="{Binding SaveFavouriteOpeningCommand}"
+                        Width="150"
+                        Margin="5"/>
 
                 <TextBlock Text="{Binding StatusMessage}"
                            Foreground="{Binding StatusColor}"

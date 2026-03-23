@@ -38,6 +38,7 @@ namespace ChessProject.ViewModels
         public ICommand PreviousCommand { get; }
         public ICommand FlipBoardCommand { get; }
         public ICommand SaveGameCommand { get; }
+        public ICommand SaveFavouriteOpeningCommand { get; }
 
 
         // Opening Information (displayed in side panel)
@@ -140,6 +141,7 @@ namespace ChessProject.ViewModels
             PreviousCommand = new RelayCommand(PreviousMove, () => CurrentMoveIndex > 0);
             FlipBoardCommand = new RelayCommand(FlipBoard);
             SaveGameCommand = new RelayCommand(SaveGame);
+            SaveFavouriteOpeningCommand = new RelayCommand(SaveFavouriteOpening);
 
             // Initialize move list displayed in side panel
             DisplayMoves = new ObservableCollection<MoveViewModel>();
@@ -356,6 +358,7 @@ namespace ChessProject.ViewModels
             IsOpeningMode = false;
             IsGameMode = true;
             _currentGame = game;
+            _currentOpening = null;
 
             _startingTimeSeconds = game.StartingTimeSeconds;
 
@@ -573,6 +576,46 @@ namespace ChessProject.ViewModels
         }
         #endregion
 
+        #region Save Opening
+        private async void SaveFavouriteOpening()
+        {
+            if (_currentOpening == null)
+            {
+                StatusColor = Brushes.Red;
+                StatusMessage = "No opening loaded.";
+                await ClearStatusMessage();
+                return;
+            }
+
+            using (var db = new ChessDbContext())
+            {
+                var exists = db.FavouriteOpenings
+                    .FirstOrDefault(o => o.Name == _currentOpening.Opening);
+
+                if (exists != null)
+                {
+                    StatusColor = Brushes.Orange;
+                    StatusMessage = "Opening already saved.";
+                    await ClearStatusMessage();
+                    return;
+                }
+
+                db.FavouriteOpenings.Add(new OpeningEntity
+                {
+                    Name = _currentOpening.Opening,
+                    ECO = _currentOpening.ECO,
+                    Moves = string.Join(" ", _moves),
+                    DateAdded = DateTime.Now
+                });
+
+                db.SaveChanges();
+            }
+
+            StatusColor = Brushes.LightGreen;
+            StatusMessage = "Opening saved successfully.";
+            await ClearStatusMessage();
+        }
+        #endregion
 
         #region Move Navigation
 

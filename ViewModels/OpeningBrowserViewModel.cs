@@ -1,10 +1,11 @@
-﻿using System;
+﻿using ChessProject.Data;
+using ChessProject.Models;
+using ChessProject.Services;
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Windows.Input;
-using ChessProject.Models;
-using ChessProject.Services;
 
 namespace ChessProject.ViewModels
 {
@@ -12,6 +13,7 @@ namespace ChessProject.ViewModels
     {
         // Properties:
         private List<Openings> _allOpenings; // Full dataset loaded from JSON
+        private bool _showingFavourites = false;
 
         // Events:
         public event Action<Openings> OpeningSelected; // Raised when user chooses an opening to load
@@ -30,6 +32,8 @@ namespace ChessProject.ViewModels
         // Collections:
         // Openings displayed in the UI after filtering/sorting
         public ObservableCollection<Openings> FilteredOpenings { get; }
+        public ObservableCollection<Openings> FavouriteOpenings { get; set; }
+        public ObservableCollection<Openings> DisplayOpenings { get; set; }
 
         // Search / Filter Properties
         private string _searchText;
@@ -71,16 +75,23 @@ namespace ChessProject.ViewModels
 
         // Commands:
         public ICommand LoadOpeningCommand { get; }
+        public ICommand ShowFavouriteOpeningsCommand { get; }
+        public ICommand SearchOpeningsCommand { get; }
 
         // Constructors:
         public OpeningBrowserViewModel()
         {
             _allOpenings = new List<Openings>();
             FilteredOpenings = new ObservableCollection<Openings>();
+            FavouriteOpenings = new ObservableCollection<Openings>();
+            DisplayOpenings = new ObservableCollection<Openings>();
 
             LoadOpeningCommand = new RelayCommand(
                 LoadSelectedOpening,
                 CanLoadOpening);
+
+            ShowFavouriteOpeningsCommand = new RelayCommand(ShowFavouriteOpenings);
+            SearchOpeningsCommand = new RelayCommand(ShowAllOpenings);
 
             SelectedColour = "All";
 
@@ -102,13 +113,39 @@ namespace ChessProject.ViewModels
             }
         }
 
+        private void LoadFavouriteOpenings()
+        {
+            FavouriteOpenings.Clear();
+
+            using (var db = new ChessDbContext())
+            {
+                var openings = db.FavouriteOpenings.ToList();
+
+                foreach (var opening in openings)
+                {
+                    FavouriteOpenings.Add(new Openings
+                    {
+                        Opening = opening.Name,
+                        ECO = opening.ECO,
+                        Moves = opening.Moves,
+                        Colour = "Both"
+                    });
+                }
+            }
+        }
+
         // Filtering / Searching / Sorting (LINQ):
         private void ApplyFilters()
         {
-            if (_allOpenings == null)
-                return;
+            IEnumerable<Openings> query;
 
-            IEnumerable<Openings> query = _allOpenings; // Start from full dataset
+            if (_showingFavourites)
+                query = FavouriteOpenings;
+            else
+                query = _allOpenings;
+
+            if (query == null)
+                return;
 
             // Search
             if (!string.IsNullOrWhiteSpace(SearchText)) // Checks if string is "" (empty) or "  " (only spaces)
@@ -192,6 +229,19 @@ namespace ChessProject.ViewModels
             OnPropertyChanged(nameof(IsSortingByBlackWin));
 
             ApplyFilters(); // Reapply sorting to list
+        }
+
+        private void ShowFavouriteOpenings()
+        {
+            LoadFavouriteOpenings();
+            _showingFavourites = true;
+            ApplyFilters();
+        }
+
+        private void ShowAllOpenings()
+        {
+            _showingFavourites = false;
+            ApplyFilters();
         }
 
         // Command Logic:

@@ -16,6 +16,6 @@ namespace ChessProject.Entities
 
         public string Moves { get; set; }
 
-        public bool IsFavourite { get; set; }
+        public DateTime DateAdded { get; set; }
     }
 }

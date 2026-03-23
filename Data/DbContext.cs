@@ -17,7 +17,7 @@ namespace ChessProject.Data
 
         public DbSet<GameEntity> Games { get; set; }
         public DbSet<LocalGameEntity> LocalGames { get; set; }
-        public DbSet<OpeningEntity> Openings { get; set; }
+        public DbSet<OpeningEntity> FavouriteOpenings { get; set; }
         public DbSet<FavouritePlayerEntity> FavouritePlayers { get; set; }
         public DbSet<MoveNoteEntity> MoveNotes { get; set; }
         public DbSet<RecentGameEntity> RecentGames { get; set; }
