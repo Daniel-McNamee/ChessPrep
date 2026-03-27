@@ -1,35 +1,44 @@
 ﻿using ChessProject.Data;
+using ChessProject.Entities;
 using ChessProject.Models;
 using ChessProject.Services;
 using System;
 using System.Collections.ObjectModel;
 using System.Linq;
-using System.Security.Cryptography;
 using System.Threading.Tasks;
 using System.Windows.Input;
+using System.Windows.Media;
 
 namespace ChessProject.ViewModels
 {
     public class GameBrowserViewModel : ViewModelBase
     {
+        // Service for fetching data from Chess.com API
         private readonly ChessComService _service;
 
+        // Observable collections for data binding to the UI
         public ObservableCollection<GameArchive> Archives { get; }
         public ObservableCollection<ChessGame> OnlineGames { get; set; }
         public ObservableCollection<ChessGame> SavedGames { get; set; }
         public ObservableCollection<ChessGame> RecentGames { get; set; }
-
+        public ObservableCollection<string> FavouritePlayers { get; set; }
         public ObservableCollection<ChessGame> DisplayGames { get; set; }
 
+        // Commands for UI interactions
         public ICommand SearchPlayerCommand { get; }
-
         public ICommand LoadArchiveCommand { get; }
         public ICommand ShowOnlineCommand { get; }
         public ICommand ShowSavedCommand { get; }
         public ICommand ShowRecentCommand { get; }
+        public ICommand SaveFavouritePlayerCommand { get; }
+        public ICommand ShowFavouritePlayersCommand { get; }
 
+        // Event to notify when a game is selected for viewing
         public event Action<ChessGame> GameSelected;
 
+
+
+        // The username of the player whose games are being browsed
         private string _username;
 
         public string Username
@@ -42,8 +51,9 @@ namespace ChessProject.ViewModels
             }
         }
 
+        // The currently selected game archive (specific month of games)
         private GameArchive _selectedArchive;
-
+        
         public GameArchive SelectedArchive
         {
             get => _selectedArchive;
@@ -54,8 +64,9 @@ namespace ChessProject.ViewModels
             }
         }
 
+        // The currently selected game from the list of online/saved/recent games
         private ChessGame _selectedGame;
-
+        
         public ChessGame SelectedGame
         {
             get => _selectedGame;
@@ -68,6 +79,7 @@ namespace ChessProject.ViewModels
             }
         }
 
+        // Methods to load and display games based on user interaction
         private void ShowOnlineGames()
         {
             DisplayGames.Clear();
@@ -93,6 +105,7 @@ namespace ChessProject.ViewModels
                 DisplayGames.Add(game);
         }
 
+        // Loads the selected game and raises the GameSelected event to notify the UI to display it
         private void LoadSelectedGame()
         {
             if (SelectedGame == null)
@@ -101,6 +114,7 @@ namespace ChessProject.ViewModels
             GameSelected?.Invoke(SelectedGame);
         }
 
+        // Loads saved games from the local database and populates the SavedGames collection
         private void LoadSavedGames()
         {
             using (var db = new ChessDbContext())
@@ -113,6 +127,8 @@ namespace ChessProject.ViewModels
                     SavedGames.Add(GameMapper.ToModel(game));
             }
         }
+
+        // Loads recently viewed games from the local database and populates the RecentGames collection
         private void LoadRecentGames()
         {
             using (var db = new ChessDbContext())
@@ -128,6 +144,131 @@ namespace ChessProject.ViewModels
             }
         }
 
+        // Flag to determine whether the UI is currently showing favourite players or game archives
+        private bool _isFavouritePlayersMode;
+        public bool IsArchiveModeVisible => !_isFavouritePlayersMode;
+        public bool IsFavouritePlayersVisible => _isFavouritePlayersMode;
+
+        // Status message and color for user feedback when adding favourite players
+        private string _statusMessage;
+        public string StatusMessage
+        {
+            get => _statusMessage;
+            set
+            {
+                _statusMessage = value;
+                OnPropertyChanged();
+            }
+        }
+
+        private Brush _statusColor = Brushes.LightGreen;
+        public Brush StatusColor
+        {
+            get => _statusColor;
+            set
+            {
+                _statusColor = value;
+                OnPropertyChanged();
+            }
+        }
+
+        private async Task ClearStatusMessage()
+        {
+            await Task.Delay(2500);
+            StatusMessage = "";
+        }
+
+        // Saves the current username as a favourite player in the local database, with validation and user feedback
+        private async void SaveFavouritePlayer()
+        {
+            if (string.IsNullOrWhiteSpace(Username))
+            {
+                StatusColor = Brushes.Red;
+                StatusMessage = "Enter a username first.";
+                await ClearStatusMessage();
+                return;
+            }
+
+            var username = Username.Trim();
+
+            using (var db = new ChessDbContext())
+            {
+                var exists = db.FavouritePlayers
+                    .FirstOrDefault(p => p.Username == username);
+
+                if (exists != null)
+                {
+                    StatusColor = Brushes.Orange;
+                    StatusMessage = $"{username} is already in favourites.";
+                    await ClearStatusMessage();
+                    return;
+                }
+
+                db.FavouritePlayers.Add(new FavouritePlayerEntity
+                {
+                    Username = username,
+                    DateAdded = DateTime.Now
+                });
+
+                db.SaveChanges();
+            }
+
+            StatusColor = Brushes.LightGreen;
+            StatusMessage = $"{username} added to favourites.";
+            await ClearStatusMessage();
+        }
+
+        // Loads the list of favourite players from the local database and populates the FavouritePlayers collection
+        private void LoadFavouritePlayers()
+        {
+            FavouritePlayers.Clear();
+
+            using (var db = new ChessDbContext())
+            {
+                var players = db.FavouritePlayers
+                                .OrderBy(p => p.Username)
+                                .ToList();
+
+                foreach (var player in players)
+                    FavouritePlayers.Add(player.Username);
+            }
+        }
+
+        // Switches the UI to show the list of favourite players instead of game archives
+        private void ShowFavouritePlayers()
+        {
+            LoadFavouritePlayers();
+            _isFavouritePlayersMode = true;
+
+            OnPropertyChanged(nameof(IsArchiveModeVisible));
+            OnPropertyChanged(nameof(IsFavouritePlayersVisible));
+        }
+
+        // When a favourite player is selected from the list, this property is set, which triggers loading that player's games
+        private string _selectedFavouritePlayer;
+        
+        public string SelectedFavouritePlayer
+        {
+            get => _selectedFavouritePlayer;
+            set
+            {
+                _selectedFavouritePlayer = value;
+                OnPropertyChanged();
+
+                if (!string.IsNullOrEmpty(value))
+                {
+                    Username = value;
+
+                    _isFavouritePlayersMode = false;
+                    OnPropertyChanged(nameof(IsArchiveModeVisible));
+                    OnPropertyChanged(nameof(IsFavouritePlayersVisible));
+
+                    SearchPlayerCommand.Execute(null);
+                }
+            }
+        }
+
+        // Constructor initializes the service, collections and commands for the ViewModel
         public GameBrowserViewModel()
         {
             _service = new ChessComService();
@@ -138,6 +279,7 @@ namespace ChessProject.ViewModels
             SavedGames = new ObservableCollection<ChessGame>();
             RecentGames = new ObservableCollection<ChessGame>();
             DisplayGames = new ObservableCollection<ChessGame>();
+            FavouritePlayers = new ObservableCollection<string>();
 
             SearchPlayerCommand = new RelayCommand(async () => await SearchPlayer());
             LoadArchiveCommand = new RelayCommand(async () => await LoadArchive());
@@ -145,10 +287,16 @@ namespace ChessProject.ViewModels
             ShowOnlineCommand = new RelayCommand(ShowOnlineGames);
             ShowSavedCommand = new RelayCommand(ShowSavedGames);
             ShowRecentCommand = new RelayCommand(ShowRecentGames);
+            SaveFavouritePlayerCommand = new RelayCommand(SaveFavouritePlayer);
+            ShowFavouritePlayersCommand = new RelayCommand(ShowFavouritePlayers);
         }
 
+        // Fetches the game archives for the specified username from the Chess.com API and populates the Archives collection
         private async Task SearchPlayer()
         {
+            _isFavouritePlayersMode = false;
+            OnPropertyChanged(nameof(IsArchiveModeVisible));
+            OnPropertyChanged(nameof(IsFavouritePlayersVisible));
             Archives.Clear();
 
             if (string.IsNullOrWhiteSpace(Username))
@@ -174,6 +322,7 @@ namespace ChessProject.ViewModels
             }
         }
 
+        // Loads the games from the selected archive (month) and populates the OnlineGames and DisplayGames collections
         private async Task LoadArchive()
         {
             OnlineGames.Clear();

@@ -94,6 +94,10 @@
     <Compile Include="Migrations\202603231331056_RmIsFavouriteAddDateAdded.Designer.cs">
       <DependentUpon>202603231331056_RmIsFavouriteAddDateAdded.cs</DependentUpon>
     </Compile>
+    <Compile Include="Migrations\202603271233491_UpdateDatabaseSchema.cs" />
+    <Compile Include="Migrations\202603271233491_UpdateDatabaseSchema.Designer.cs">
+      <DependentUpon>202603271233491_UpdateDatabaseSchema.cs</DependentUpon>
+    </Compile>
     <Compile Include="Migrations\Configuration.cs" />
     <Compile Include="Models\ChessGame.cs" />
     <Compile Include="Models\GameArchive.cs" />
@@ -173,6 +177,9 @@
     </EmbeddedResource>
     <EmbeddedResource Include="Migrations\202603231331056_RmIsFavouriteAddDateAdded.resx">
       <DependentUpon>202603231331056_RmIsFavouriteAddDateAdded.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Migrations\202603271233491_UpdateDatabaseSchema.resx">
+      <DependentUpon>202603271233491_UpdateDatabaseSchema.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="Properties\Resources.resx">
       <Generator>ResXFileCodeGenerator</Generator>

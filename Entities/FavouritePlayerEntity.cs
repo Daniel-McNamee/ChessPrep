@@ -9,7 +9,7 @@ namespace ChessProject.Entities
     public class FavouritePlayerEntity
     {
         public int Id { get; set; }
-
         public string Username { get; set; }
+        public DateTime DateAdded { get; set; }
     }
 }
