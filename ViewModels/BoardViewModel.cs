@@ -5,6 +5,7 @@ using ChessProject.Services;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Input;
@@ -71,7 +72,11 @@ namespace ChessProject.ViewModels
         // Move sequence for current opening (SAN notation only)
         // Used by move application engine to rebuild board state
         private List<string> _moves = new List<string>();
+
+        // En passant target square (if last move was a double pawn advance)
         private SquareViewModel _enPassantTarget;
+
+        // UI Display Information for loaded game (from PGN metadata)
         public int TotalMoves => _moves?.Count ?? 0;
 
         public string WhitePlayer { get; private set; }
@@ -87,7 +92,7 @@ namespace ChessProject.ViewModels
 
         private ChessGame _currentGame;
 
-
+        // Mode flags to control UI state and behaviour
         private bool _isOpeningMode;
         public bool IsOpeningMode
         {
@@ -110,6 +115,7 @@ namespace ChessProject.ViewModels
             }
         }
 
+        // Current move being displayed in the UI (null if at starting position)
         public MoveViewModel CurrentMove
         {
             get
@@ -120,6 +126,14 @@ namespace ChessProject.ViewModels
                 return DisplayMoves[CurrentMoveIndex];
             }
         }
+
+        // Service for generating legal moves (used for move application and validation)
+        private readonly MoveGenerationService _moveService = new MoveGenerationService();
+
+        private SquareViewModel _selectedSquare;
+        private List<SquareViewModel> _legalMoves = new List<SquareViewModel>();
+
+        public ICommand SquareClickCommand { get; }
 
         #endregion
 
@@ -142,6 +156,7 @@ namespace ChessProject.ViewModels
             FlipBoardCommand = new RelayCommand(FlipBoard);
             SaveGameCommand = new RelayCommand(SaveGame);
             SaveFavouriteOpeningCommand = new RelayCommand(SaveFavouriteOpening);
+            SquareClickCommand = new RelayCommand<SquareViewModel>(OnSquareClicked);
 
             // Initialize move list displayed in side panel
             DisplayMoves = new ObservableCollection<MoveViewModel>();
@@ -1854,6 +1869,87 @@ namespace ChessProject.ViewModels
         }
 
 
+        #endregion
+
+        #region Game Logic
+        // Handles user clicks on squares for piece selection and movement
+        private void OnSquareClicked(SquareViewModel square)
+        {
+            
+
+            if (square == null)
+                return;
+
+            // No piece selected yet 
+            if (_selectedSquare == null)
+            {
+                // Only allow selecting a square with a piece
+                if (!square.HasPiece)
+                    return;
+
+                SelectSquare(square);
+                return;
+            }
+
+            // Clicking a valid move
+            if (_legalMoves.Contains(square))
+            {
+                MovePiece(_selectedSquare, square);
+                ClearSelection();
+                return;
+            }
+
+            // Selecting a different piece
+            if (square.HasPiece &&
+                square.Piece.Colour == _selectedSquare.Piece.Colour)
+            {
+                SelectSquare(square);
+                return;
+            }
+
+            // Invalid click -> reset
+            ClearSelection();
+        }
+
+        // Highlights the selected square and legal move squares
+        private void SelectSquare(SquareViewModel square)
+        {
+            ClearSelection();
+
+            _selectedSquare = square;
+
+            _legalMoves = _moveService.GetLegalMoves(square, Squares);
+
+            // Highlight selected square
+            square.LastMoveHighlight = LastMoveHighlightType.Normal;
+
+            // Highlight legal moves
+            foreach (var move in _legalMoves)
+            {
+                move.LastMoveHighlight = LastMoveHighlightType.Normal;
+            }
+        }
+
+        // Moves a piece from one square to another, updating the board state and move highlights
+        private void MovePiece(SquareViewModel from, SquareViewModel to)
+        {
+            ClearLastMoveHighlights();
+
+            to.SetPiece(from.Piece);
+            from.ClearPiece();
+
+            from.LastMoveHighlight = LastMoveHighlightType.Normal;
+            to.LastMoveHighlight = LastMoveHighlightType.Normal;
+        }
+
+        // Clears move highlights from the last move
+        private void ClearSelection()
+        {
+            _selectedSquare = null;
+            _legalMoves.Clear();
+
+            ClearLastMoveHighlights();
+        }
         #endregion
     }
 }

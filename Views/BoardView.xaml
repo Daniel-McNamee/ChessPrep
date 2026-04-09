@@ -36,6 +36,12 @@
                                     Background="{Binding SquareColor}"
                                     BorderThickness="3">
 
+                                <Border.InputBindings>
+                                    <MouseBinding Gesture="LeftClick"
+                                                  Command="{Binding DataContext.SquareClickCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                  CommandParameter="{Binding}" />
+                                </Border.InputBindings>
+
                                 <Border.Style>
                                     <Style TargetType="Border">
                                         <Setter Property="BorderBrush" Value="Transparent"/>
@@ -203,9 +209,25 @@
 
                     <ListBox.ItemTemplate>
                         <DataTemplate>
-                            <TextBlock Text="{Binding Notation}"
-                                       Foreground="White"
-                                       Padding="4"/>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="60"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+
+                                <!-- Move notation -->
+                                <TextBlock Text="{Binding Notation}"
+                                           Foreground="White"
+                                           Padding="4"/>
+
+                                <!-- Move note -->
+                                <TextBox Grid.Column="1"
+                                         Text="{Binding Note, UpdateSourceTrigger=PropertyChanged}"
+                                         Background="#2A2A2A"
+                                         Foreground="White"
+                                         BorderThickness="0"
+                                         Padding="2"/>
+                            </Grid>
                         </DataTemplate>
                     </ListBox.ItemTemplate>
 

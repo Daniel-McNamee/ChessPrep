@@ -1,0 +1,309 @@
+﻿using ChessProject.ViewModels;
+using System.Collections.Generic;
+using System.Linq;
+
+namespace ChessProject.Services
+{
+    public class MoveGenerationService
+    {
+        // Main method to get legal moves for a piece on a given square
+        public List<SquareViewModel> GetLegalMoves(
+            SquareViewModel from,
+            IEnumerable<SquareViewModel> squares)
+        {
+            var moves = new List<SquareViewModel>();
+
+            if (from == null || !from.HasPiece)
+                return moves;
+
+            switch (from.Piece.Type)
+            {
+                case PieceType.Pawn:
+                    moves.AddRange(GetPawnMoves(from, squares));
+                    break;
+
+                case PieceType.Knight:
+                    moves.AddRange(GetKnightMoves(from, squares));
+                    break;
+
+                case PieceType.Bishop:
+                    moves.AddRange(GetBishopMoves(from, squares));
+                    break;
+
+                case PieceType.Rook:
+                    moves.AddRange(GetRookMoves(from, squares));
+                    break;
+
+                case PieceType.Queen:
+                    moves.AddRange(GetQueenMoves(from, squares));
+                    break;
+
+                case PieceType.King:
+                    moves.AddRange(GetKingMoves(from, squares));
+                    break;
+            }
+
+            return moves;
+        }
+
+        // Helper to find a square by row and column
+        private SquareViewModel GetSquare(IEnumerable<SquareViewModel> squares, int row, int col)
+        {
+            return squares.FirstOrDefault(s => s.Row == row && s.Column == col);
+        }
+
+        #region Move Generation Methods
+        // Knight Moves
+        private List<SquareViewModel> GetKnightMoves(
+            SquareViewModel from,
+            IEnumerable<SquareViewModel> squares)
+        {
+            var moves = new List<SquareViewModel>();
+
+            int[,] offsets = new int[,]
+            {
+                { 2, 1 }, { 2, -1 }, { -2, 1 }, { -2, -1 },
+                { 1, 2 }, { 1, -2 }, { -1, 2 }, { -1, -2 }
+            };
+
+            for (int i = 0; i < offsets.GetLength(0); i++)
+            {
+                int newRow = from.Row + offsets[i, 0];
+                int newCol = from.Column + offsets[i, 1];
+
+                if (newRow < 0 || newRow > 7 || newCol < 0 || newCol > 7)
+                    continue;
+
+                var target = GetSquare(squares, newRow, newCol);
+
+                if (target == null)
+                    continue;
+
+                // Cannot capture own piece
+                if (target.HasPiece &&
+                    target.Piece.Colour == from.Piece.Colour)
+                    continue;
+
+                moves.Add(target);
+            }
+
+            return moves;
+        }
+
+
+        // Pawn Moves 
+        private List<SquareViewModel> GetPawnMoves(
+            SquareViewModel from,
+            IEnumerable<SquareViewModel> squares)
+        {
+            var moves = new List<SquareViewModel>();
+
+            int direction = from.Piece.Colour == PieceColour.White ? -1 : 1;
+
+            int startRow = from.Piece.Colour == PieceColour.White ? 6 : 1;
+
+            int forwardRow = from.Row + direction;
+
+            // One square forward
+            if (forwardRow >= 0 && forwardRow <= 7)
+            {
+                var forwardSquare = GetSquare(squares, forwardRow, from.Column);
+
+                if (forwardSquare != null && !forwardSquare.HasPiece)
+                {
+                    moves.Add(forwardSquare);
+
+                    // Two squares forward (only from starting row)
+                    if (from.Row == startRow)
+                    {
+                        int doubleRow = from.Row + (2 * direction);
+                        var doubleSquare = GetSquare(squares, doubleRow, from.Column);
+
+                        if (doubleSquare != null && !doubleSquare.HasPiece)
+                        {
+                            moves.Add(doubleSquare);
+                        }
+                    }
+                }
+            }
+
+            // Captures (diagonals)
+            int[] captureCols = { from.Column - 1, from.Column + 1 };
+
+            foreach (var col in captureCols)
+            {
+                if (col < 0 || col > 7)
+                    continue;
+
+                int row = from.Row + direction;
+
+                if (row < 0 || row > 7)
+                    continue;
+
+                var target = GetSquare(squares, row, col);
+
+                if (target != null &&
+                    target.HasPiece &&
+                    target.Piece.Colour != from.Piece.Colour)
+                {
+                    moves.Add(target);
+                }
+            }
+
+            return moves;
+        }
+
+
+        // Bishop Moves
+        private List<SquareViewModel> GetBishopMoves(
+            SquareViewModel from,
+            IEnumerable<SquareViewModel> squares)
+        {
+            var moves = new List<SquareViewModel>();
+
+            // 4 diagonal directions
+            int[] rowDirections = { 1, 1, -1, -1 };
+            int[] colDirections = { 1, -1, 1, -1 };
+
+            for (int d = 0; d < 4; d++)
+            {
+                int row = from.Row + rowDirections[d];
+                int col = from.Column + colDirections[d];
+
+                while (row >= 0 && row <= 7 && col >= 0 && col <= 7)
+                {
+                    var target = GetSquare(squares, row, col);
+
+                    if (target == null)
+                        break;
+
+                    // If square has a piece
+                    if (target.HasPiece)
+                    {
+                        // Enemy piece -> can capture
+                        if (target.Piece.Colour != from.Piece.Colour)
+                        {
+                            moves.Add(target);
+                        }
+
+                        // Stop in both cases (blocked)
+                        break;
+                    }
+
+                    // Empty square -> valid move
+                    moves.Add(target);
+
+                    row += rowDirections[d];
+                    col += colDirections[d];
+                }
+            }
+
+            return moves;
+        }
+
+
+        // Rook Moves
+        private List<SquareViewModel> GetRookMoves(
+            SquareViewModel from,
+            IEnumerable<SquareViewModel> squares)
+        {
+            var moves = new List<SquareViewModel>();
+
+            // 4 straight directions: up, down, left, right
+            int[] rowDirections = { 1, -1, 0, 0 };
+            int[] colDirections = { 0, 0, 1, -1 };
+
+            for (int d = 0; d < 4; d++)
+            {
+                int row = from.Row + rowDirections[d];
+                int col = from.Column + colDirections[d];
+
+                while (row >= 0 && row <= 7 && col >= 0 && col <= 7)
+                {
+                    var target = GetSquare(squares, row, col);
+
+                    if (target == null)
+                        break;
+
+                    // If square has a piece
+                    if (target.HasPiece)
+                    {
+                        // Opponent's piece -> can capture
+                        if (target.Piece.Colour != from.Piece.Colour)
+                        {
+                            moves.Add(target);
+                        }
+
+                        // Stop regardless (blocked)
+                        break;
+                    }
+
+                    // Empty square -> valid move
+                    moves.Add(target);
+
+                    row += rowDirections[d];
+                    col += colDirections[d];
+                }
+            }
+
+            return moves;
+        }
+
+
+        // Queen Moves
+        private List<SquareViewModel> GetQueenMoves(
+            SquareViewModel from,
+            IEnumerable<SquareViewModel> squares)
+        {
+            var moves = new List<SquareViewModel>();
+
+            // Combine bishop + rook moves
+            moves.AddRange(GetBishopMoves(from, squares));
+            moves.AddRange(GetRookMoves(from, squares));
+
+            return moves;
+        }
+
+
+        // King Moves
+        private List<SquareViewModel> GetKingMoves(
+            SquareViewModel from,
+            IEnumerable<SquareViewModel> squares)
+        {
+            var moves = new List<SquareViewModel>();
+
+            for (int rowOffset = -1; rowOffset <= 1; rowOffset++)
+            {
+                for (int colOffset = -1; colOffset <= 1; colOffset++)
+                {
+                    // Skip current square
+                    if (rowOffset == 0 && colOffset == 0)
+                        continue;
+
+                    int newRow = from.Row + rowOffset;
+                    int newCol = from.Column + colOffset;
+
+                    if (newRow < 0 || newRow > 7 || newCol < 0 || newCol > 7)
+                        continue;
+
+                    var target = GetSquare(squares, newRow, newCol);
+
+                    if (target == null)
+                        continue;
+
+                    // Cannot move onto own piece
+                    if (target.HasPiece &&
+                        target.Piece.Colour == from.Piece.Colour)
+                        continue;
+
+                    moves.Add(target);
+                }
+            }
+
+            return moves;
+        }
+
+        #endregion
+
+    }
+}

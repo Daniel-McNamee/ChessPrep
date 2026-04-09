@@ -104,11 +104,13 @@
     <Compile Include="Services\ChessComService.cs" />
     <Compile Include="Services\GameMapper.cs" />
     <Compile Include="Services\GameTimeControlParser.cs" />
+    <Compile Include="Services\MoveGenerationService.cs" />
     <Compile Include="Services\PgnParser.cs" />
     <Compile Include="ViewModels\BoardOrientation.cs" />
     <Compile Include="ViewModels\GameBrowserViewModel.cs" />
     <Compile Include="ViewModels\LastMoveHighlightType.cs" />
     <Compile Include="ViewModels\MainViewModel.cs" />
+    <Compile Include="ViewModels\MoveItem.cs" />
     <Compile Include="ViewModels\MoveViewModel.cs" />
     <Compile Include="Views\GameBrowserView.xaml.cs">
       <DependentUpon>GameBrowserView.xaml</DependentUpon>
