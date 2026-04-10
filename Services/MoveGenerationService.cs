@@ -1,5 +1,7 @@
 ﻿using ChessProject.ViewModels;
+using System;
 using System.Collections.Generic;
+using System.Data.Entity.Core.Common.CommandTrees.ExpressionBuilder;
 using System.Linq;
 
 namespace ChessProject.Services
@@ -7,9 +9,10 @@ namespace ChessProject.Services
     public class MoveGenerationService
     {
         // Main method to get legal moves for a piece on a given square
-        public List<SquareViewModel> GetLegalMoves(
+        public List<SquareViewModel> GetMoves(
             SquareViewModel from,
-            IEnumerable<SquareViewModel> squares)
+            IEnumerable<SquareViewModel> squares,
+            SquareViewModel enPassantTarget = null)
         {
             var moves = new List<SquareViewModel>();
 
@@ -19,7 +22,7 @@ namespace ChessProject.Services
             switch (from.Piece.Type)
             {
                 case PieceType.Pawn:
-                    moves.AddRange(GetPawnMoves(from, squares));
+                    moves.AddRange(GetPawnMoves(from, squares, enPassantTarget));
                     break;
 
                 case PieceType.Knight:
@@ -44,6 +47,32 @@ namespace ChessProject.Services
             }
 
             return moves;
+        }
+
+        public List<SquareViewModel> GetLegalMoves(
+            SquareViewModel from,
+            IEnumerable<SquareViewModel> squares,
+            SquareViewModel enPassantTarget)
+        {
+            var pseudoMoves = GetMoves(from, squares, enPassantTarget);
+
+            var legalMoves = new List<SquareViewModel>();
+
+            var colour = from.Piece.Colour;
+
+            foreach (var move in pseudoMoves)
+            {
+                var (captured, f, t) = MakeTemporaryMove(from, move);
+
+                bool isInCheck = IsKingInCheck(squares, colour);
+
+                UndoTemporaryMove(f, t, captured);
+
+                if (!isInCheck)
+                    legalMoves.Add(move);
+            }
+
+            return legalMoves;
         }
 
         // Helper to find a square by row and column
@@ -90,11 +119,11 @@ namespace ChessProject.Services
             return moves;
         }
 
-
         // Pawn Moves 
         private List<SquareViewModel> GetPawnMoves(
             SquareViewModel from,
-            IEnumerable<SquareViewModel> squares)
+            IEnumerable<SquareViewModel> squares,
+            SquareViewModel enPassantTarget)
         {
             var moves = new List<SquareViewModel>();
 
@@ -142,11 +171,20 @@ namespace ChessProject.Services
 
                 var target = GetSquare(squares, row, col);
 
+                // Normal capture
                 if (target != null &&
                     target.HasPiece &&
                     target.Piece.Colour != from.Piece.Colour)
                 {
                     moves.Add(target);
+                }
+
+                // En passant capture
+                if (enPassantTarget != null &&
+                    enPassantTarget.Row == row &&
+                    enPassantTarget.Column == col)
+                {
+                    moves.Add(enPassantTarget);
                 }
             }
 
@@ -180,13 +218,13 @@ namespace ChessProject.Services
                     // If square has a piece
                     if (target.HasPiece)
                     {
-                        // Enemy piece -> can capture
+                        // Opponent's piece -> can capture
                         if (target.Piece.Colour != from.Piece.Colour)
                         {
                             moves.Add(target);
                         }
 
-                        // Stop in both cases (blocked)
+                        // Always stop after hitting a piece (blocked)
                         break;
                     }
 
@@ -234,7 +272,7 @@ namespace ChessProject.Services
                             moves.Add(target);
                         }
 
-                        // Stop regardless (blocked)
+                        // Always stop after hitting a piece (blocked)
                         break;
                     }
 
@@ -300,10 +338,134 @@ namespace ChessProject.Services
                 }
             }
 
+            // Castling
+            moves.AddRange(GetCastlingMoves(from, squares));
+
+            return moves;
+        }
+
+        // Castling Moves
+        private List<SquareViewModel> GetCastlingMoves(
+            SquareViewModel kingSquare,
+            IEnumerable<SquareViewModel> squares)
+        {
+            var moves = new List<SquareViewModel>();
+
+            var colour = kingSquare.Piece.Colour;
+            int row = colour == PieceColour.White ? 7 : 0;
+
+            // King must be on starting square
+            if (kingSquare.Column != 4)
+                return moves;
+
+            // Kingside (short castle)
+            var fSquare = GetSquare(squares, row, 5);
+            var gSquare = GetSquare(squares, row, 6);
+            var rookSquare = GetSquare(squares, row, 7);
+
+            if (fSquare != null && gSquare != null && rookSquare != null &&
+                !fSquare.HasPiece &&
+                !gSquare.HasPiece &&
+                rookSquare.HasPiece &&
+                rookSquare.Piece.Type == PieceType.Rook)
+            {
+                moves.Add(gSquare);
+            }
+
+            // Queenside (long castle)
+            var bSquare = GetSquare(squares, row, 1);
+            var cSquare = GetSquare(squares, row, 2);
+            var dSquare = GetSquare(squares, row, 3);
+            var rookQ = GetSquare(squares, row, 0);
+
+            if (bSquare != null && cSquare != null && dSquare != null &&
+                !bSquare.HasPiece &&
+                !cSquare.HasPiece &&
+                !dSquare.HasPiece &&
+                rookQ.HasPiece &&
+                rookQ.Piece.Type == PieceType.Rook)
+            {
+                moves.Add(cSquare);
+            }
+
             return moves;
         }
 
         #endregion
+
+        #region Check Detection Methods
+        // Helper to find the king's square for a given colour
+        public SquareViewModel FindKing(IEnumerable<SquareViewModel> squares, PieceColour colour)
+        {
+            return squares.FirstOrDefault(s =>
+                s.HasPiece &&
+                s.Piece.Type == PieceType.King &&
+                s.Piece.Colour == colour);
+        }
+
+        // Check if a square is under attack by any piece of the specified colour
+        public bool IsSquareUnderAttack(
+            IEnumerable<SquareViewModel> squares,
+            int targetRow,
+            int targetCol,
+            PieceColour attackingColour)
+        {
+            foreach (var square in squares)
+            {
+                if (!square.HasPiece)
+                    continue;
+
+                if (square.Piece.Colour != attackingColour)
+                    continue;
+
+                var moves = GetMoves(square, squares);
+
+                if (moves.Any(m => m.Row == targetRow && m.Column == targetCol))
+                    return true;
+            }
+
+            return false;
+        }
+
+        // Check if the king of the specified colour is in check
+        public bool IsKingInCheck(IEnumerable<SquareViewModel> squares, PieceColour colour)
+        {
+            var king = FindKing(squares, colour);
+
+            if (king == null)
+                return false;
+
+            PieceColour enemyColour = colour == PieceColour.White
+                ? PieceColour.Black
+                : PieceColour.White;
+
+            return IsSquareUnderAttack(squares, king.Row, king.Column, enemyColour);
+        }
+        #endregion
+
+        // Helper to make a temporary move and return captured piece (if any) for undoing later
+        private (ChessPiece capturedPiece, SquareViewModel from, SquareViewModel to)
+        MakeTemporaryMove(SquareViewModel from, SquareViewModel to)
+        {
+            var captured = to.Piece;
+
+            to.SetPiece(from.Piece);
+            from.ClearPiece();
+
+            return (captured, from, to);
+        }
+
+        // Helper to undo a temporary move using the captured piece info
+        private void UndoTemporaryMove(
+            SquareViewModel from,
+            SquareViewModel to,
+            ChessPiece capturedPiece)
+        {
+            from.SetPiece(to.Piece);
+            to.SetPiece(capturedPiece);
+        }
+
+
 
     }
 }

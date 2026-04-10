@@ -48,6 +48,18 @@ namespace ChessProject.ViewModels
             LastMoveHighlight = LastMoveHighlightType.None;
         }
 
+        // Indicates whether king is in check - used to highlight the king's square red
+        private bool _isInCheck;
+        public bool IsInCheck
+        {
+            get => _isInCheck;
+            set
+            {
+                _isInCheck = value;
+                OnPropertyChanged();
+            }
+        }
+
 
         // Indicates whether the square currently contains a piece
         public bool HasPiece => Piece != null;

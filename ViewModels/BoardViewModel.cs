@@ -28,6 +28,13 @@ namespace ChessProject.ViewModels
         // Currently selected opening (loaded from OpeningBrowser)
         private Openings _currentOpening;
 
+        // Current player's turn
+        public string CurrentTurnDisplay =>
+            CurrentTurn == PieceColour.White ? "White to move" : "Black to move";
+
+        // Flag to indicate if the game has ended (used to disable move navigation)
+        private bool _isGameOver; 
+
         // Moves displayed in the side panel move list
         // Bound to move list UI and highlights current move
         public ObservableCollection<MoveViewModel> DisplayMoves { get; }
@@ -134,6 +141,16 @@ namespace ChessProject.ViewModels
         private List<SquareViewModel> _legalMoves = new List<SquareViewModel>();
 
         public ICommand SquareClickCommand { get; }
+
+        // Castling rights tracking
+        private bool _whiteKingMoved = false;
+        private bool _blackKingMoved = false;
+
+        private bool _whiteKingsideRookMoved = false;
+        private bool _whiteQueensideRookMoved = false;
+
+        private bool _blackKingsideRookMoved = false;
+        private bool _blackQueensideRookMoved = false;
 
         #endregion
 
@@ -411,6 +428,8 @@ namespace ChessProject.ViewModels
             AddToRecentGames(game);
 
             CurrentMoveIndex = 0;
+            CurrentTurn = PieceColour.White;
+            ResetCastlingRights();
             SetStartingPosition();
         }
 
@@ -685,12 +704,18 @@ namespace ChessProject.ViewModels
         // Reset board back to starting position
         private void ResetBoard()
         {
+            _isGameOver = false;
             CurrentMoveIndex = 0;
+            CurrentTurn = PieceColour.White;
+            ResetCastlingRights();
             RebuildBoardToCurrentMove();
 
             UpdateCurrentMoveHighlight();
 
+            UpdateCheckHighlight();
+
             OnPropertyChanged(nameof(CurrentMove));
+            StatusMessage = "";
         }
 
         // Apply next move in the opening sequence
@@ -699,10 +724,18 @@ namespace ChessProject.ViewModels
             if (CurrentMoveIndex >= _moves.Count)
                 return;
 
+            CurrentTurn = CurrentTurn == PieceColour.White
+                ? PieceColour.Black
+                : PieceColour.White;
+
             CurrentMoveIndex++;
             RebuildBoardToCurrentMove();
 
             UpdateCurrentMoveHighlight();
+
+            UpdateCheckHighlight();
+
+            CheckGameEnd();
 
             OnPropertyChanged(nameof(CurrentMove));
         }
@@ -713,10 +746,16 @@ namespace ChessProject.ViewModels
             if (CurrentMoveIndex <= 0)
                 return;
 
+            CurrentTurn = CurrentTurn == PieceColour.White
+                ? PieceColour.Black
+                : PieceColour.White;
+
             CurrentMoveIndex--;
             RebuildBoardToCurrentMove();
 
             UpdateCurrentMoveHighlight();
+
+            UpdateCheckHighlight();
 
             OnPropertyChanged(nameof(CurrentMove));
         }
@@ -726,6 +765,7 @@ namespace ChessProject.ViewModels
         {
             SetStartingPosition();
             ClearLastMoveHighlights();
+            UpdateCheckHighlight();
 
             for (int i = 0; i < CurrentMoveIndex; i++)
             {
@@ -1826,6 +1866,7 @@ namespace ChessProject.ViewModels
             targetSquare.LastMoveHighlight = LastMoveHighlightType.Capture;
         }
 
+        // Castling logic
         private void ApplyCastle(bool isWhite, bool kingSide)
         {
             int row = isWhite ? 7 : 0;
@@ -1869,15 +1910,82 @@ namespace ChessProject.ViewModels
         }
 
 
+        // Check if castling move is legal (not moving through check, king/rook not moved)
+        public bool IsCastleLegal(SquareViewModel from, SquareViewModel to)
+        {
+            if (from.Piece.Type != PieceType.King)
+                return true;
+
+            if (Math.Abs(to.Column - from.Column) != 2)
+                return true;
+
+            bool isWhite = from.Piece.Colour == PieceColour.White;
+
+            // King moved
+            if (isWhite && _whiteKingMoved) return false;
+            if (!isWhite && _blackKingMoved) return false;
+
+            // Rook moved
+            if (to.Column == 6) // kingside
+            {
+                if (isWhite && _whiteKingsideRookMoved) return false;
+                if (!isWhite && _blackKingsideRookMoved) return false;
+            }
+            else if (to.Column == 2) // queenside
+            {
+                if (isWhite && _whiteQueensideRookMoved) return false;
+                if (!isWhite && _blackQueensideRookMoved) return false;
+            }
+
+            int row = from.Row;
+
+            // In check
+            if (_moveService.IsKingInCheck(Squares, from.Piece.Colour))
+                return false;
+
+            // Determine direction of castling (kingside or queenside)
+            int direction = to.Column > from.Column ? 1 : -1;
+
+            // Check squares the king moves through are not under attack
+            for (int i = 1; i <= 2; i++)
+            {
+                int col = from.Column + (i * direction);
+
+                if (_moveService.IsSquareUnderAttack(
+                    Squares,
+                    row,
+                    col,
+                    isWhite ? PieceColour.Black : PieceColour.White))
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        private void ResetCastlingRights()
+        {
+            _whiteKingMoved = false;
+            _blackKingMoved = false;
+
+            _whiteKingsideRookMoved = false;
+            _whiteQueensideRookMoved = false;
+
+            _blackKingsideRookMoved = false;
+            _blackQueensideRookMoved = false;
+        }
+
         #endregion
 
         #region Game Logic
         // Handles user clicks on squares for piece selection and movement
         private void OnSquareClicked(SquareViewModel square)
-        {
-            
-
+        {            
             if (square == null)
+                return;
+
+            if(_isGameOver)
                 return;
 
             // No piece selected yet 
@@ -1885,6 +1993,9 @@ namespace ChessProject.ViewModels
             {
                 // Only allow selecting a square with a piece
                 if (!square.HasPiece)
+                    return;
+
+                if (square.Piece.Colour != CurrentTurn)
                     return;
 
                 SelectSquare(square);
@@ -1918,7 +2029,9 @@ namespace ChessProject.ViewModels
 
             _selectedSquare = square;
 
-            _legalMoves = _moveService.GetLegalMoves(square, Squares);
+            _legalMoves = _moveService.GetLegalMoves(square, Squares, _enPassantTarget);
+
+            _legalMoves = _legalMoves.Where(move => IsCastleLegal(square, move)).ToList();
 
             // Highlight selected square
             square.LastMoveHighlight = LastMoveHighlightType.Normal;
@@ -1935,11 +2048,95 @@ namespace ChessProject.ViewModels
         {
             ClearLastMoveHighlights();
 
-            to.SetPiece(from.Piece);
+            var piece = from.Piece;
+
+            // en passant capture logic: if a pawn moves to the en passant target square, remove the captured pawn
+            if (piece.Type == PieceType.Pawn &&
+                _enPassantTarget != null &&
+                to == _enPassantTarget)
+            {
+                int direction = piece.Colour == PieceColour.White ? 1 : -1;
+
+                var capturedPawn = GetSquare(to.Row + direction, to.Column);
+                capturedPawn.ClearPiece();
+            }
+
+            // Castling logic: if the king moves 2 squares, also move the rook
+            if (piece.Type == PieceType.King && Math.Abs(to.Column - from.Column) == 2)
+            {
+                int row = from.Row;
+
+                // Kingside
+                if (to.Column == 6)
+                {
+                    var rookFrom = GetSquare(row, 7);
+                    var rookTo = GetSquare(row, 5);
+
+                    rookTo.SetPiece(rookFrom.Piece);
+                    rookFrom.ClearPiece();
+                }
+                // Queenside
+                else if (to.Column == 2)
+                {
+                    var rookFrom = GetSquare(row, 0);
+                    var rookTo = GetSquare(row, 3);
+
+                    rookTo.SetPiece(rookFrom.Piece);
+                    rookFrom.ClearPiece();
+                }
+            }
+
+            // Move piece
+            to.SetPiece(piece);
             from.ClearPiece();
 
+            // Track king movement
+            if (piece.Type == PieceType.King)
+            {
+                if (piece.Colour == PieceColour.White)
+                    _whiteKingMoved = true;
+                else
+                    _blackKingMoved = true;
+            }
+
+            // Track rook movement
+            if (piece.Type == PieceType.Rook)
+            {
+                if (piece.Colour == PieceColour.White)
+                {
+                    if (from.Column == 0) _whiteQueensideRookMoved = true;
+                    if (from.Column == 7) _whiteKingsideRookMoved = true;
+                }
+                else
+                {
+                    if (from.Column == 0) _blackQueensideRookMoved = true;
+                    if (from.Column == 7) _blackKingsideRookMoved = true;
+                }
+            }
+
+            // Set en passant target if a pawn moved 2 squares forward
+            if (piece.Type == PieceType.Pawn &&
+                Math.Abs(to.Row - from.Row) == 2)
+            {
+                int midRow = (from.Row + to.Row) / 2;
+                _enPassantTarget = GetSquare(midRow, from.Column);
+            }
+            else
+            {
+                _enPassantTarget = null;
+            }
+
+            // Highlight move
             from.LastMoveHighlight = LastMoveHighlightType.Normal;
             to.LastMoveHighlight = LastMoveHighlightType.Normal;
+
+            // Switch turn
+            CurrentTurn = CurrentTurn == PieceColour.White
+                ? PieceColour.Black
+                : PieceColour.White;
+
+            UpdateCheckHighlight();
+            CheckGameEnd();
         }
 
         // Clears move highlights from the last move
@@ -1950,6 +2147,88 @@ namespace ChessProject.ViewModels
 
             ClearLastMoveHighlights();
         }
+
+        // Highlights any king that is currently in check after a move
+        private void UpdateCheckHighlight()
+        {
+            // Clear previous check highlights
+            foreach (var square in Squares)
+                square.IsInCheck = false;
+
+            var service = new MoveGenerationService();
+
+            // Check both kings
+            foreach (var colour in new[] { PieceColour.White, PieceColour.Black })
+            {
+                if (service.IsKingInCheck(Squares, colour))
+                {
+                    var king = service.FindKing(Squares, colour);
+
+                    if (king != null)
+                        king.IsInCheck = true;
+                }
+            }
+        }
+
+        // Tracks which player's turn it is and notifies bindings when it changes
+        private PieceColour _currentTurn = PieceColour.White;
+        
+        public PieceColour CurrentTurn
+        {
+            get => _currentTurn;
+            set
+            {
+                _currentTurn = value;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(CurrentTurnDisplay));
+            }
+        }
+
+        // Checks if the given colour has any legal moves available (used for checkmate/stalemate detection)
+        private bool HasAnyLegalMoves(PieceColour colour) 
+        {
+            var service = new MoveGenerationService();
+
+            foreach (var square in Squares)
+            {
+                if (!square.HasPiece)
+                    continue;
+
+                if (square.Piece.Colour != colour)
+                    continue;
+
+                var moves = service.GetLegalMoves(square, Squares, _enPassantTarget);
+
+                if (moves.Any())
+                    return true;
+            }
+
+            return false;
+        }
+
+        // Checks for checkmate or stalemate after each move and updates game status accordingly
+        private void CheckGameEnd() 
+        {
+            var service = new MoveGenerationService();
+
+            bool isInCheck = service.IsKingInCheck(Squares, CurrentTurn);
+            bool hasMoves = HasAnyLegalMoves(CurrentTurn);
+
+            if (isInCheck && !hasMoves)
+            {
+                _isGameOver = true;
+                StatusMessage = $"Checkmate! {(CurrentTurn == PieceColour.White ? "Black" : "White")} wins.";
+                StatusColor = Brushes.Red;
+            }
+            else if (!isInCheck && !hasMoves)
+            {
+                _isGameOver = true;
+                StatusMessage = "Stalemate!";
+                StatusColor = Brushes.Orange;
+            }
+        }
+
+
         #endregion
     }
 }

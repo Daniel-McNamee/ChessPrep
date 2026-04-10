@@ -58,6 +58,11 @@
                                                 <Setter Property="BorderBrush" Value="#FF4C4C"/>
                                             </DataTrigger>
 
+                                            <DataTrigger Binding="{Binding IsInCheck}" Value="True">
+                                                <Setter Property="BorderBrush" Value="#FF4C4C"/>
+                                                <Setter Property="BorderThickness" Value="3"/>
+                                            </DataTrigger>
+
                                         </Style.Triggers>
                                     </Style>
                                 </Border.Style>
@@ -113,6 +118,10 @@
                                FontWeight="Bold"
                                Foreground="White"
                                Margin="0,0,0,8"/>
+
+                    <TextBlock Text="{Binding CurrentTurnDisplay}"
+                               Foreground="White"
+                               Margin="0,0,0,10"/>
 
                     <TextBlock Text="{Binding WhitePlayer, StringFormat=White: {0}}"
                                Foreground="White"/>
