@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Input;
 using System.Windows.Media;
@@ -312,7 +313,16 @@ namespace ChessProject.ViewModels
 
             for (int i = 0; i < _moves.Count; i++)
             {
-                DisplayMoves.Add(new MoveViewModel(i, _moves[i]));
+                // Create view model for each move (stores move notation and user notes)
+                var moveVm = new MoveViewModel(i, _moves[i]);
+
+                // Subscribe to note changes so we can save them to the database
+                moveVm.NoteChanged += (m) =>
+                {
+                    SaveNote(m);
+                };
+
+                DisplayMoves.Add(moveVm);
             }
 
             // Reset playback to start of opening
@@ -402,8 +412,19 @@ namespace ChessProject.ViewModels
 
             for (int i = 0; i < _moves.Count; i++)
             {
-                DisplayMoves.Add(new MoveViewModel(i, _moves[i]));
+                // Create view model for each move (stores move notation and user notes)
+                var moveVm = new MoveViewModel(i, _moves[i]);
+
+                // Subscribe to note changes so we can save them to the database
+                moveVm.NoteChanged += (m) =>
+                {
+                    SaveNote(m);
+                };
+
+                DisplayMoves.Add(moveVm);
             }
+
+            LoadNotes();
 
             WhitePlayer = game.White;
             WhiteRating = game.WhiteElo;
@@ -442,7 +463,16 @@ namespace ChessProject.ViewModels
 
             for (int i = 0; i < _moves.Count; i++)
             {
-                DisplayMoves.Add(new MoveViewModel(i, _moves[i]));
+                // Create view model for each move (stores move notation and user notes)
+                var moveVm = new MoveViewModel(i, _moves[i]);
+
+                // Subscribe to note changes so we can save them to the database
+                moveVm.NoteChanged += (m) =>
+                {
+                    SaveNote(m);
+                };
+
+                DisplayMoves.Add(moveVm);
             }
 
             OnPropertyChanged(nameof(WhiteClock));
@@ -481,6 +511,107 @@ namespace ChessProject.ViewModels
                 {
                     db.RecentGames.RemoveRange(oldGames);
                     db.SaveChanges();
+                }
+            }
+        }
+
+        #endregion
+
+        #region Move Notes
+        // Note Saving Logic
+        private void SaveNote(MoveViewModel move)
+        {
+            if (_currentGame == null)
+                return;
+
+            using (var db = new ChessDbContext())
+            {
+                // Try to find the game in the db
+                var gameEntity = db.Games
+                    .FirstOrDefault(g => g.PGN == _currentGame.Pgn);
+
+                // If game doesn't exist create it
+                if (gameEntity == null)
+                {
+                    gameEntity = new GameEntity
+                    {
+                        WhitePlayer = _currentGame.White,
+                        BlackPlayer = _currentGame.Black,
+                        WhiteElo = _currentGame.WhiteElo,
+                        BlackElo = _currentGame.BlackElo,
+                        Result = _currentGame.Result,
+                        TimeControl = _currentGame.GameType,
+                        PGN = _currentGame.Pgn,
+                        DateSaved = DateTime.Now,
+                        HasNotes = true
+                    };
+
+                    db.Games.Add(gameEntity);
+                    db.SaveChanges();
+                }
+
+                // Find existing note for this move
+                var existing = db.MoveNotes
+                    .FirstOrDefault(n => n.GameId == gameEntity.Id && n.MoveIndex == move.Index);
+
+                // If empty or null delete note
+                if (string.IsNullOrWhiteSpace(move.Note))
+                {
+                    if (existing != null)
+                        db.MoveNotes.Remove(existing);
+
+                    db.SaveChanges();
+                    return;
+                }
+
+                // Update existing
+                if (existing != null)
+                {
+                    existing.Note = move.Note;
+                }
+                else
+                {
+                    // Create new
+                    db.MoveNotes.Add(new MoveNoteEntity
+                    {
+                        GameId = gameEntity.Id,
+                        MoveIndex = move.Index,
+                        Note = move.Note
+                    });
+                }
+
+                // Flag for annotated game display
+                gameEntity.HasNotes = true;
+
+                db.SaveChanges();
+            }
+        }
+
+        // Note Loading Logic
+        private void LoadNotes()
+        {
+            if (_currentGame == null)
+                return;
+
+            using (var db = new ChessDbContext())
+            {
+                // Find game in db
+                var gameEntity = db.Games
+                    .FirstOrDefault(g => g.PGN == _currentGame.Pgn);
+
+                if (gameEntity == null)
+                    return;
+
+                // Get all notes for this game
+                var notes = db.MoveNotes
+                    .Where(n => n.GameId == gameEntity.Id)
+                    .ToList();
+
+                // Apply notes to moves
+                foreach (var move in DisplayMoves)
+                {
+                    var note = notes.FirstOrDefault(n => n.MoveIndex == move.Index);
+                    move.Note = note?.Note;
                 }
             }
         }

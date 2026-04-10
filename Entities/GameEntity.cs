@@ -22,9 +22,13 @@ namespace ChessProject.Entities
 
         public DateTime DateSaved { get; set; }
 
+        public bool HasNotes { get; set; }
+
         public string TimeControl { get; set; }
 
         public bool IsFavourite { get; set; }
+
+        public bool IsLocalGame { get; set; }
 
         public virtual ICollection<MoveNoteEntity> MoveNotes { get; set; }
     }

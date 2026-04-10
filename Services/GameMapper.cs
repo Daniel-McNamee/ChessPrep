@@ -47,7 +47,8 @@ namespace ChessProject.Services
                 BlackElo = entity.BlackElo,
                 Result = entity.Result,
                 Pgn = entity.PGN,
-                GameType = entity.TimeControl
+                GameType = entity.TimeControl,
+                HasNotes = entity.HasNotes
             };
         }
 

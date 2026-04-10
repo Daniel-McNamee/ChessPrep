@@ -1,4 +1,6 @@
-﻿namespace ChessProject.Models
+﻿using static System.Net.Mime.MediaTypeNames;
+
+namespace ChessProject.Models
 {
     public class ChessGame
     {
@@ -13,6 +15,7 @@
 
         public string GameType { get; set; }
         public int StartingTimeSeconds { get; set; }
+        public bool HasNotes { get; set; }
 
         public string Pgn { get; set; }
 
@@ -46,7 +49,12 @@
                     break;
             }
 
-            return $"{White} ({WhiteElo}) vs {Black} ({BlackElo}) • {GameType} • {resultText}";
+            var text = $"{White} ({WhiteElo}) vs {Black} ({BlackElo}) • {GameType} • {resultText}";
+
+            if (HasNotes)
+                text += " (Annotated)";
+
+            return text;
         }
     }
 }
