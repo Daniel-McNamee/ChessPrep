@@ -29,8 +29,10 @@ namespace ChessProject.ViewModels
         public ICommand LoadArchiveCommand { get; }
         public ICommand ShowOnlineCommand { get; }
         public ICommand ShowSavedCommand { get; }
+        public ICommand DeleteSavedGameCommand { get; }
         public ICommand ShowRecentCommand { get; }
         public ICommand SaveFavouritePlayerCommand { get; }
+        public ICommand DeleteFavouritePlayerCommand { get; }
         public ICommand ShowFavouritePlayersCommand { get; }
 
         // Event to notify when a game is selected for viewing
@@ -82,13 +84,28 @@ namespace ChessProject.ViewModels
         // Methods to load and display games based on user interaction
         private void ShowOnlineGames()
         {
+            IsSavedMode = false;
+
             DisplayGames.Clear();
             foreach (var game in OnlineGames)
                 DisplayGames.Add(game);
         }
 
+        private bool _isSavedMode;
+        public bool IsSavedMode
+        {
+            get => _isSavedMode;
+            set
+            {
+                _isSavedMode = value;
+                OnPropertyChanged();
+            }
+        }
+
         private void ShowSavedGames()
         {
+            IsSavedMode = true;
+
             LoadSavedGames();
 
             DisplayGames.Clear();
@@ -98,6 +115,8 @@ namespace ChessProject.ViewModels
 
         private void ShowRecentGames()
         {
+            IsSavedMode = false;
+
             LoadRecentGames();
 
             DisplayGames.Clear();
@@ -218,6 +237,25 @@ namespace ChessProject.ViewModels
             await ClearStatusMessage();
         }
 
+        private void DeleteFavouritePlayer(string player)
+        {
+            if (string.IsNullOrEmpty(player))
+                return;
+
+            using (var db = new ChessDbContext())
+            {
+                var entity = db.FavouritePlayers.FirstOrDefault(p => p.Username == player);
+
+                if (entity != null)
+                {
+                    db.FavouritePlayers.Remove(entity);
+                    db.SaveChanges();
+                }
+            }
+
+            FavouritePlayers.Remove(player);
+        }
+
         // Loads the list of favourite players from the local database and populates the FavouritePlayers collection
         private void LoadFavouritePlayers()
         {
@@ -286,8 +324,10 @@ namespace ChessProject.ViewModels
 
             ShowOnlineCommand = new RelayCommand(ShowOnlineGames);
             ShowSavedCommand = new RelayCommand(ShowSavedGames);
+            DeleteSavedGameCommand = new RelayCommand<ChessGame>(DeleteSavedGame);
             ShowRecentCommand = new RelayCommand(ShowRecentGames);
             SaveFavouritePlayerCommand = new RelayCommand(SaveFavouritePlayer);
+            DeleteFavouritePlayerCommand = new RelayCommand<string>(DeleteFavouritePlayer);
             ShowFavouritePlayersCommand = new RelayCommand(ShowFavouritePlayers);
         }
 
@@ -328,13 +368,33 @@ namespace ChessProject.ViewModels
             OnlineGames.Clear();
             DisplayGames.Clear();
 
-            var games = await _service.GetGamesFromArchive(SelectedArchive.Url);
+            var games = await _service.GetGamesFromArchive(SelectedArchive.Url, _username);
 
             foreach (var game in games)
             {
                 OnlineGames.Add(game);
                 DisplayGames.Add(game);
             }
+        }
+
+
+        private void DeleteSavedGame(ChessGame game)
+        {
+            if (game == null)
+                return;
+
+            using (var db = new ChessDbContext())
+            {
+                var entity = db.Games.FirstOrDefault(g => g.PGN == game.Pgn);
+
+                if (entity != null)
+                {
+                    db.Games.Remove(entity);
+                    db.SaveChanges();
+                }
+            }
+
+            DisplayGames.Remove(game);
         }
     }
 }

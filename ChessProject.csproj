@@ -101,6 +101,14 @@
     <Compile Include="Migrations\202604101052279_AddHasNotes.Designer.cs">
       <DependentUpon>202604101052279_AddHasNotes.cs</DependentUpon>
     </Compile>
+    <Compile Include="Migrations\202604101426420_RemoveLocalGameEntity.cs" />
+    <Compile Include="Migrations\202604101426420_RemoveLocalGameEntity.Designer.cs">
+      <DependentUpon>202604101426420_RemoveLocalGameEntity.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Migrations\202604101639572_AddPerspectivePlayer.cs" />
+    <Compile Include="Migrations\202604101639572_AddPerspectivePlayer.Designer.cs">
+      <DependentUpon>202604101639572_AddPerspectivePlayer.cs</DependentUpon>
+    </Compile>
     <Compile Include="Migrations\Configuration.cs" />
     <Compile Include="Models\ChessGame.cs" />
     <Compile Include="Models\GameArchive.cs" />
@@ -188,6 +196,12 @@
     </EmbeddedResource>
     <EmbeddedResource Include="Migrations\202604101052279_AddHasNotes.resx">
       <DependentUpon>202604101052279_AddHasNotes.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Migrations\202604101426420_RemoveLocalGameEntity.resx">
+      <DependentUpon>202604101426420_RemoveLocalGameEntity.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Migrations\202604101639572_AddPerspectivePlayer.resx">
+      <DependentUpon>202604101639572_AddPerspectivePlayer.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="Properties\Resources.resx">
       <Generator>ResXFileCodeGenerator</Generator>

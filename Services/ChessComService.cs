@@ -43,7 +43,7 @@ namespace ChessProject.Services
             return archives;
         }
 
-        public async Task<List<ChessGame>> GetGamesFromArchive(string archiveUrl)
+        public async Task<List<ChessGame>> GetGamesFromArchive(string archiveUrl, string username)
         {
             var response = await _client.GetAsync(archiveUrl);
 
@@ -88,6 +88,8 @@ namespace ChessProject.Services
 
                     WhiteElo = whiteRating,
                     BlackElo = blackRating,
+
+                    PerspectivePlayer = username,
 
                     Result = result,
                     Date = date,

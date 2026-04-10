@@ -6,7 +6,7 @@
     <UserControl.Resources>
         <conv:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
     </UserControl.Resources>
-    
+
     <Border Padding="16">
 
         <Grid>
@@ -127,7 +127,62 @@
 
                     <ListBox ItemsSource="{Binding FavouritePlayers}"
                              SelectedItem="{Binding SelectedFavouritePlayer}"
-                             Height="400"/>
+                             Height="400">
+
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+
+                                    <TextBlock Text="{Binding}"
+                                               Padding="4"
+                                               VerticalAlignment="Center"/>
+
+                                    <Button Grid.Column="1"
+                                            Content="✕"
+                                            Width="18"
+                                            Height="18"
+                                            Margin="6,0,0,0"
+                                            Background="Transparent"
+                                            BorderThickness="0"
+                                            FontWeight="Bold"
+                                            Cursor="Hand"
+                                            VerticalAlignment="Center"
+                                            Command="{Binding DataContext.DeleteFavouritePlayerCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
+                                            CommandParameter="{Binding}">
+
+                                        <Button.Template>
+                                            <ControlTemplate TargetType="Button">
+                                                <TextBlock Text="{TemplateBinding Content}"
+                                                           Foreground="{TemplateBinding Foreground}"
+                                                           HorizontalAlignment="Center"
+                                                           VerticalAlignment="Center"/>
+                                            </ControlTemplate>
+                                        </Button.Template>
+
+                                        <Button.Style>
+                                            <Style TargetType="Button">
+                                                <Setter Property="Foreground" Value="#888"/>
+                                                <Setter Property="Opacity" Value="0.6"/>
+
+                                                <Style.Triggers>
+                                                    <Trigger Property="IsMouseOver" Value="True">
+                                                        <Setter Property="Foreground" Value="#FF5555"/>
+                                                        <Setter Property="Opacity" Value="1"/>
+                                                    </Trigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Button.Style>
+
+                                    </Button>
+                                </Grid>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+
+                    </ListBox>
                 </StackPanel>
 
                 <!-- Games -->
@@ -145,8 +200,55 @@
 
                         <ListBox.ItemTemplate>
                             <DataTemplate>
-                                <TextBlock Text="{Binding}"
-                                           Padding="4"/>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+
+                                    <TextBlock Text="{Binding}"
+                                               Padding="4"
+                                               VerticalAlignment="Center"/>
+
+                                    <Button Grid.Column="1"
+                                            Content="✕"
+                                            Width="18"
+                                            Height="18"
+                                            Margin="6,0,0,0"
+                                            Background="Transparent"
+                                            BorderThickness="0"
+                                            FontWeight="Bold"
+                                            Cursor="Hand"
+                                            VerticalAlignment="Center"
+                                            Command="{Binding DataContext.DeleteSavedGameCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
+                                            CommandParameter="{Binding}"
+                                            Visibility="{Binding DataContext.IsSavedMode, RelativeSource={RelativeSource AncestorType=ListBox}, Converter={StaticResource BoolToVisibilityConverter}}">
+
+                                        <Button.Template>
+                                            <ControlTemplate TargetType="Button">
+                                                <TextBlock Text="{TemplateBinding Content}"
+                                                           Foreground="{TemplateBinding Foreground}"
+                                                           HorizontalAlignment="Center"
+                                                           VerticalAlignment="Center"/>
+                                            </ControlTemplate>
+                                        </Button.Template>
+
+                                        <Button.Style>
+                                            <Style TargetType="Button">
+                                                <Setter Property="Foreground" Value="#888"/>
+                                                <Setter Property="Opacity" Value="0.6"/>
+
+                                                <Style.Triggers>
+                                                    <Trigger Property="IsMouseOver" Value="True">
+                                                        <Setter Property="Foreground" Value="#FF5555"/>
+                                                        <Setter Property="Opacity" Value="1"/>
+                                                    </Trigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Button.Style>
+
+                                    </Button>
+                                </Grid>
                             </DataTemplate>
                         </ListBox.ItemTemplate>
 

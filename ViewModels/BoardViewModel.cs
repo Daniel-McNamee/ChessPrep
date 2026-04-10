@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Linq;
+using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Input;
@@ -45,6 +46,7 @@ namespace ChessProject.ViewModels
         public ICommand ResetCommand { get; }
         public ICommand NextCommand { get; }
         public ICommand PreviousCommand { get; }
+        public ICommand SelectMoveCommand { get; }
         public ICommand FlipBoardCommand { get; }
         public ICommand SaveGameCommand { get; }
         public ICommand SaveFavouriteOpeningCommand { get; }
@@ -171,6 +173,7 @@ namespace ChessProject.ViewModels
             ResetCommand = new RelayCommand(ResetBoard);
             NextCommand = new RelayCommand(NextMove, () => CurrentMoveIndex < _moves.Count);
             PreviousCommand = new RelayCommand(PreviousMove, () => CurrentMoveIndex > 0);
+            SelectMoveCommand = new RelayCommand<MoveViewModel>(SelectMove);
             FlipBoardCommand = new RelayCommand(FlipBoard);
             SaveGameCommand = new RelayCommand(SaveGame);
             SaveFavouriteOpeningCommand = new RelayCommand(SaveFavouriteOpening);
@@ -401,6 +404,7 @@ namespace ChessProject.ViewModels
             IsGameMode = true;
             _currentGame = game;
             _currentOpening = null;
+            _isGameOver = false;
 
             _startingTimeSeconds = game.StartingTimeSeconds;
 
@@ -432,7 +436,23 @@ namespace ChessProject.ViewModels
             BlackPlayer = game.Black;
             BlackRating = game.BlackElo;
 
-            GameResult = game.Result;
+            // Set board orientation based on player's perspective
+            if (!string.IsNullOrEmpty(game.PerspectivePlayer))
+            {
+                bool isWhite = game.PerspectivePlayer.Equals(game.White, StringComparison.OrdinalIgnoreCase);
+                bool isBlack = game.PerspectivePlayer.Equals(game.Black, StringComparison.OrdinalIgnoreCase);
+
+                if (isWhite)
+                    Orientation = BoardOrientation.WhiteBottom;
+                else if (isBlack)
+                    Orientation = BoardOrientation.BlackBottom;
+            }
+            else
+            {
+                Orientation = BoardOrientation.WhiteBottom; // default if no perspective
+            }
+
+            GameResult = game.GetResultForPlayer();
             GameDate = game.Date;
 
             GameType = game.GameType;
@@ -450,6 +470,8 @@ namespace ChessProject.ViewModels
 
             CurrentMoveIndex = 0;
             CurrentTurn = PieceColour.White;
+            StatusMessage = "";
+            ClearLastMoveHighlights();
             ResetCastlingRights();
             SetStartingPosition();
         }
@@ -537,6 +559,7 @@ namespace ChessProject.ViewModels
                     {
                         WhitePlayer = _currentGame.White,
                         BlackPlayer = _currentGame.Black,
+                        PerspectivePlayer = _currentGame.PerspectivePlayer,
                         WhiteElo = _currentGame.WhiteElo,
                         BlackElo = _currentGame.BlackElo,
                         Result = _currentGame.Result,
@@ -695,6 +718,7 @@ namespace ChessProject.ViewModels
                 {
                     WhitePlayer = _currentGame.White,
                     BlackPlayer = _currentGame.Black,
+                    PerspectivePlayer = _currentGame.PerspectivePlayer,
                     WhiteElo = _currentGame.WhiteElo,
                     BlackElo = _currentGame.BlackElo,
                     Result = _currentGame.Result,
@@ -833,7 +857,7 @@ namespace ChessProject.ViewModels
         }
 
         // Reset board back to starting position
-        private void ResetBoard()
+        public void ResetBoard()
         {
             _isGameOver = false;
             CurrentMoveIndex = 0;
@@ -902,6 +926,47 @@ namespace ChessProject.ViewModels
             {
                 ApplyMove(_moves[i], i);
             }
+        }
+
+        // Handles user selecting a move from the move list.
+        // Jumps the board to the chosen move by rebuilding the position
+        private void SelectMove(MoveViewModel move)
+        {
+            if (move == null)
+                return;
+
+            // Move index represents position after the move is applied
+            CurrentMoveIndex = move.Index + 1;
+
+            // Rebuild board to that position
+            RebuildBoardToCurrentMove();
+
+            // Determine whose turn it is based on the number of moves applied.
+            // Even index = White to move, Odd index = Black to move
+            CurrentTurn = (CurrentMoveIndex % 2 == 0)
+                ? PieceColour.White
+                : PieceColour.Black;
+
+            UpdateCurrentMoveHighlight();
+            UpdateCheckHighlight();
+
+            OnPropertyChanged(nameof(CurrentMove));
+        }
+
+        // Jump directly to final position 
+        public void JumpToEnd()
+        {
+            CurrentMoveIndex = _moves.Count;
+            RebuildBoardToCurrentMove();
+
+            CurrentTurn = (CurrentMoveIndex % 2 == 0)
+                ? PieceColour.White
+                : PieceColour.Black;
+
+            UpdateCurrentMoveHighlight();
+            UpdateCheckHighlight();
+
+            OnPropertyChanged(nameof(CurrentMove));
         }
 
         // Parse SAN move string and route to correct piece logic

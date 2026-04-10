@@ -2,6 +2,7 @@
 using System.ComponentModel;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 
 namespace ChessProject.Views
 {
@@ -11,6 +12,12 @@ namespace ChessProject.Views
         {
             InitializeComponent();
             DataContextChanged += OnDataContextChanged;
+
+            Loaded += (s, e) =>
+            {
+                this.Focus();
+                Keyboard.Focus(this);
+            };
         }
 
         private void OnDataContextChanged(object sender, DependencyPropertyChangedEventArgs e)
@@ -39,6 +46,41 @@ namespace ChessProject.Views
                 });
             }
         }
-        
+
+        // Move navigation using arrow keys
+        private void UserControl_KeyDown(object sender, KeyEventArgs e)
+        {
+            var vm = DataContext as BoardViewModel;
+            if (vm == null)
+                return;
+
+            switch (e.Key)
+            {
+                // Prev move
+                case Key.Up:
+                    vm.PreviousCommand.Execute(null);
+                    e.Handled = true;
+                    break;
+
+                // Next move
+                case Key.Down:
+                    vm.NextCommand.Execute(null);
+                    e.Handled = true;
+                    break;
+
+                // Jump to beginning
+                case Key.Left:
+                    vm.ResetBoard();
+                    e.Handled = true;
+                    break;
+
+                // Jump to end
+                case Key.Right:
+                    vm.JumpToEnd();
+                    e.Handled = true;
+                    break;
+            }
+        }
+
     }
 }

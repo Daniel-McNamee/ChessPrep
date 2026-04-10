@@ -12,6 +12,7 @@ namespace ChessProject.Entities
 
         public string WhitePlayer { get; set; }
         public string BlackPlayer { get; set; }
+        public string PerspectivePlayer { get; set; }
 
         public int WhiteElo { get; set; }
         public int BlackElo { get; set; }

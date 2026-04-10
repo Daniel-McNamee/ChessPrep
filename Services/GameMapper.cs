@@ -12,6 +12,7 @@ namespace ChessProject.Services
             {
                 WhitePlayer = game.White,
                 BlackPlayer = game.Black,
+                PerspectivePlayer = game.PerspectivePlayer ?? "",
                 WhiteElo = game.WhiteElo,
                 BlackElo = game.BlackElo,
                 Result = game.Result,
@@ -28,6 +29,7 @@ namespace ChessProject.Services
             {
                 WhitePlayer = game.White,
                 BlackPlayer = game.Black,
+                PerspectivePlayer = game.PerspectivePlayer ?? "",
                 WhiteElo = game.WhiteElo,
                 BlackElo = game.BlackElo,
                 Result = game.Result,
@@ -43,6 +45,7 @@ namespace ChessProject.Services
             {
                 White = entity.WhitePlayer,
                 Black = entity.BlackPlayer,
+                PerspectivePlayer = entity.PerspectivePlayer,
                 WhiteElo = entity.WhiteElo,
                 BlackElo = entity.BlackElo,
                 Result = entity.Result,
@@ -58,6 +61,7 @@ namespace ChessProject.Services
             {
                 White = entity.WhitePlayer,
                 Black = entity.BlackPlayer,
+                PerspectivePlayer = entity.PerspectivePlayer,
                 WhiteElo = entity.WhiteElo,
                 BlackElo = entity.BlackElo,
                 Result = entity.Result,
