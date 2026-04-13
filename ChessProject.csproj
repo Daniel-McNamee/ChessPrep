@@ -73,6 +73,7 @@
     <Compile Include="Data\DbContext.cs" />
     <Compile Include="Entities\FavouritePlayerEntity.cs" />
     <Compile Include="Entities\GameEntity.cs" />
+    <Compile Include="Entities\LocalGameEntity.cs" />
     <Compile Include="Entities\MoveNoteEntity.cs" />
     <Compile Include="Entities\OpeningEntity.cs" />
     <Compile Include="Entities\RecentGameEntity.cs" />
@@ -109,6 +110,14 @@
     <Compile Include="Migrations\202604101639572_AddPerspectivePlayer.Designer.cs">
       <DependentUpon>202604101639572_AddPerspectivePlayer.cs</DependentUpon>
     </Compile>
+    <Compile Include="Migrations\202604131157497_AddLocalGames.cs" />
+    <Compile Include="Migrations\202604131157497_AddLocalGames.Designer.cs">
+      <DependentUpon>202604131157497_AddLocalGames.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Migrations\202604131420568_UpdateLocalGameEntity.cs" />
+    <Compile Include="Migrations\202604131420568_UpdateLocalGameEntity.Designer.cs">
+      <DependentUpon>202604131420568_UpdateLocalGameEntity.cs</DependentUpon>
+    </Compile>
     <Compile Include="Migrations\Configuration.cs" />
     <Compile Include="Models\ChessGame.cs" />
     <Compile Include="Models\GameArchive.cs" />
@@ -119,21 +128,33 @@
     <Compile Include="Services\PgnParser.cs" />
     <Compile Include="ViewModels\BoardOrientation.cs" />
     <Compile Include="ViewModels\GameBrowserViewModel.cs" />
+    <Compile Include="ViewModels\GameMode.cs" />
     <Compile Include="ViewModels\LastMoveHighlightType.cs" />
     <Compile Include="ViewModels\MainViewModel.cs" />
     <Compile Include="ViewModels\MoveItem.cs" />
     <Compile Include="ViewModels\MoveViewModel.cs" />
+    <Compile Include="ViewModels\PlayViewModel.cs" />
     <Compile Include="Views\GameBrowserView.xaml.cs">
       <DependentUpon>GameBrowserView.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Views\LocalGameSetupView.xaml.cs">
+      <DependentUpon>LocalGameSetupView.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Views\OpeningBrowserView.xaml.cs">
       <DependentUpon>OpeningBrowserView.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Views\PlayView.xaml.cs">
+      <DependentUpon>PlayView.xaml</DependentUpon>
     </Compile>
     <Page Include="Views\BoardView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Views\GameBrowserView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Views\LocalGameSetupView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
@@ -161,6 +182,10 @@
       <SubType>Code</SubType>
     </Compile>
     <Page Include="Views\OpeningBrowserView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Views\PlayView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
@@ -202,6 +227,12 @@
     </EmbeddedResource>
     <EmbeddedResource Include="Migrations\202604101639572_AddPerspectivePlayer.resx">
       <DependentUpon>202604101639572_AddPerspectivePlayer.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Migrations\202604131157497_AddLocalGames.resx">
+      <DependentUpon>202604131157497_AddLocalGames.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Migrations\202604131420568_UpdateLocalGameEntity.resx">
+      <DependentUpon>202604131420568_UpdateLocalGameEntity.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="Properties\Resources.resx">
       <Generator>ResXFileCodeGenerator</Generator>

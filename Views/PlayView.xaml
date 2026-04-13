@@ -1,0 +1,80 @@
+﻿<UserControl x:Class="ChessProject.Views.PlayView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:conv="clr-namespace:ChessProject.Converters">
+
+    <UserControl.Resources>
+        <conv:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
+    </UserControl.Resources>
+
+    <Grid Background="#2A2A2A">
+
+        <!-- Main Menu -->
+        <StackPanel Visibility="{Binding IsSetupVisible, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=Invert}"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center"
+                    Width="300">
+
+            <TextBlock Text="Play"
+                       FontSize="24"
+                       FontWeight="Bold"
+                       Foreground="White"
+                       HorizontalAlignment="Center"
+                       Margin="0,0,0,20"/>
+
+            <Button Content="♟ Local 2 Player"
+                    Height="50"
+                    Command="{Binding StartLocalModeCommand}"/>
+
+            <Button Content="📂 Saved Positions"
+                    Height="50"
+                    IsEnabled="False"/>
+
+            <Button Content="🧩 Puzzles"
+                    Height="50"
+                    IsEnabled="False"/>
+
+        </StackPanel>
+
+        <!-- Game Setup -->
+        <StackPanel Visibility="{Binding IsSetupVisible, Converter={StaticResource BoolToVisibilityConverter}}"
+            HorizontalAlignment="Center"
+            VerticalAlignment="Center"
+            Width="350"
+            Background="#2A2A2A">
+
+            <TextBlock Text="Game Setup"
+               FontSize="22"
+               FontWeight="Bold"
+               Foreground="White"
+               HorizontalAlignment="Center"
+               Margin="0,0,0,20"/>
+
+            <!-- White Player -->
+            <TextBlock Text="White Player" Foreground="#CCC"/>
+            <TextBox Text="{Binding WhitePlayer}"
+             Margin="0,5,0,15"
+             Height="30"/>
+
+            <!-- Black Player -->
+            <TextBlock Text="Black Player" Foreground="#CCC"/>
+            <TextBox Text="{Binding BlackPlayer}"
+             Margin="0,5,0,15"
+             Height="30"/>
+
+            <!-- Time Control -->
+            <TextBlock Text="Time Control" Foreground="#CCC"/>
+            <ComboBox ItemsSource="{Binding TimeControls}"
+              SelectedItem="{Binding SelectedTimeControl}"
+              Margin="0,5,0,20"
+              Height="30"/>
+
+            <!-- Start Button -->
+            <Button Content="Start Game"
+            Command="{Binding StartLocalGameCommand}"
+            Height="40"
+            FontWeight="Bold"/>
+        </StackPanel>
+
+    </Grid>
+</UserControl>

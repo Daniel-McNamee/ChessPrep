@@ -20,7 +20,8 @@ namespace ChessProject.ViewModels
         // Child ViewModels:
         public BoardViewModel BoardViewModel { get; } // ViewModel for the chessboard tab
         public OpeningBrowserViewModel OpeningBrowserViewModel { get; } // ViewModel for the opening browser tab
-        public GameBrowserViewModel GameBrowserViewModel { get; }
+        public GameBrowserViewModel GameBrowserViewModel { get; } // ViewModel for the game browser tab
+        public PlayViewModel PlayViewModel { get; } // ViewModel for the play tab
 
         // Constructors:
         public MainViewModel()
@@ -30,6 +31,7 @@ namespace ChessProject.ViewModels
             BoardViewModel = new BoardViewModel();
             OpeningBrowserViewModel = new OpeningBrowserViewModel();
             GameBrowserViewModel = new GameBrowserViewModel();
+            PlayViewModel = new PlayViewModel(this);
 
             // Subscribe to opening selection event from browser
             OpeningBrowserViewModel.OpeningSelected += OnOpeningSelected;

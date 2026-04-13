@@ -19,6 +19,7 @@ namespace ChessProject.ViewModels
         // Observable collections for data binding to the UI
         public ObservableCollection<GameArchive> Archives { get; }
         public ObservableCollection<ChessGame> OnlineGames { get; set; }
+        public ObservableCollection<LocalGameEntity> LocalGames { get; set; }
         public ObservableCollection<ChessGame> SavedGames { get; set; }
         public ObservableCollection<ChessGame> RecentGames { get; set; }
         public ObservableCollection<string> FavouritePlayers { get; set; }
@@ -34,6 +35,7 @@ namespace ChessProject.ViewModels
         public ICommand SaveFavouritePlayerCommand { get; }
         public ICommand DeleteFavouritePlayerCommand { get; }
         public ICommand ShowFavouritePlayersCommand { get; }
+        public ICommand ShowLocalGamesCommand { get; }
 
         // Event to notify when a game is selected for viewing
         public event Action<ChessGame> GameSelected;
@@ -329,6 +331,7 @@ namespace ChessProject.ViewModels
             SaveFavouritePlayerCommand = new RelayCommand(SaveFavouritePlayer);
             DeleteFavouritePlayerCommand = new RelayCommand<string>(DeleteFavouritePlayer);
             ShowFavouritePlayersCommand = new RelayCommand(ShowFavouritePlayers);
+            ShowLocalGamesCommand = new RelayCommand(ShowLocalGames);
         }
 
         // Fetches the game archives for the specified username from the Chess.com API and populates the Archives collection
@@ -396,5 +399,33 @@ namespace ChessProject.ViewModels
 
             DisplayGames.Remove(game);
         }
+
+        private void ShowLocalGames()
+        {
+            IsSavedMode = false;
+
+            LoadLocalGames();
+        }
+
+        private void LoadLocalGames()
+        {
+            using (var db = new ChessDbContext())
+            {
+                LocalGames.Clear();
+                DisplayGames.Clear();
+
+                var games = db.LocalGames
+                    .OrderByDescending(g => g.DatePlayed)
+                    .ToList();
+
+                foreach (var game in games)
+                {
+                    LocalGames.Add(game);
+
+                    DisplayGames.Add(GameMapper.ToModel(game));
+                }
+            }
+        }
+
     }
 }

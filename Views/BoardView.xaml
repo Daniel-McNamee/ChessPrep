@@ -161,6 +161,30 @@
 
                 </StackPanel>
 
+                
+                <!-- LOCAL GAME INFO -->
+                <StackPanel Visibility="{Binding IsLocalGame, Converter={StaticResource BoolToVisibilityConverter}}"
+            Margin="0,0,0,16">
+
+                    <TextBlock Text="Local Game"
+               FontSize="16"
+               FontWeight="Bold"
+               Foreground="White"
+               Margin="0,0,0,8"/>
+
+                    <TextBlock Text="{Binding WhiteDisplay}"
+               Foreground="White"
+               Margin="0,2"/>
+
+                    <TextBlock Text="{Binding BlackDisplay}"
+               Foreground="White"
+               Margin="0,2"/>
+
+                    <TextBlock Text="{Binding TimeDisplay}"
+               Foreground="White"
+               Margin="0,6,0,0"/>
+                </StackPanel>
+
 
                 <!-- CONTROLS -->
                 <TextBlock Text="Controls"

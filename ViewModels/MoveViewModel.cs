@@ -4,6 +4,10 @@ namespace ChessProject.ViewModels
 {
     public class MoveViewModel : ViewModelBase
     {
+        // Reference to the parent ViewModel for event handling
+        public ViewModelBase CurrentView { get; set; }
+
+        // Properties
         public int Index { get; }
         public string Notation { get; }
 
@@ -41,6 +45,7 @@ namespace ChessProject.ViewModels
 
         public event Action<MoveViewModel> NoteChanged;
 
+        // Constructor
         public MoveViewModel(int index, string notation)
         {
             Index = index;

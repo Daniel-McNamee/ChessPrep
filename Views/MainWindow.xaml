@@ -21,6 +21,10 @@
             <views:GameBrowserView DataContext="{Binding GameBrowserViewModel}"/>
         </TabItem>
 
+        <TabItem Header="Play">
+            <views:PlayView DataContext="{Binding PlayViewModel}"/>
+        </TabItem>
+
     </TabControl>
 
 

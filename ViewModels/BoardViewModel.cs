@@ -101,6 +101,7 @@ namespace ChessProject.ViewModels
         public string GameType { get; set; }
 
         private ChessGame _currentGame;
+        public GameMode CurrentGameMode { get; set; }
 
         // Mode flags to control UI state and behaviour
         private bool _isOpeningMode;
@@ -286,6 +287,7 @@ namespace ChessProject.ViewModels
         // Load selected opening
         public void LoadOpening(Openings opening)
         {
+            CurrentGameMode = GameMode.Opening;
             IsOpeningMode = true;
             IsGameMode = false;
 
@@ -400,6 +402,7 @@ namespace ChessProject.ViewModels
 
         public void LoadGame(ChessGame game)
         {
+            CurrentGameMode = GameMode.Replay;
             IsOpeningMode = false;
             IsGameMode = true;
             _currentGame = game;
@@ -2422,9 +2425,174 @@ namespace ChessProject.ViewModels
                 StatusMessage = "Stalemate!";
                 StatusColor = Brushes.Orange;
             }
+
+            if (_isGameOver && CurrentGameMode == GameMode.Local2Player)
+            {
+                SaveLocalGame();
+            }
         }
 
 
+        #endregion
+
+        #region Local Game
+        // Properties
+
+        // Stores moves (PGN)
+        private List<string> _currentGameMoves = new List<string>();
+
+        private string _whitePlayerName;
+        public string WhitePlayerName
+        {
+            get => _whitePlayerName;
+            set
+            {
+                _whitePlayerName = value;
+                OnPropertyChanged();
+            }
+        }
+
+        private string _blackPlayerName;
+        public string BlackPlayerName
+        {
+            get => _blackPlayerName;
+            set
+            {
+                _blackPlayerName = value;
+                OnPropertyChanged();
+            }
+        }
+
+        private string _selectedTimeControl;
+        public string SelectedTimeControl
+        {
+            get => _selectedTimeControl;
+            set
+            {
+                _selectedTimeControl = value;
+                OnPropertyChanged();
+            }
+        }
+
+        public TimeSpan WhiteTimeRemaining { get; set; }
+        public TimeSpan BlackTimeRemaining { get; set; }
+
+        public string WhiteDisplay => $"White: {WhitePlayerName}";
+        public string BlackDisplay => $"Black: {BlackPlayerName}";
+        public string TimeDisplay => $"Time: {SelectedTimeControl}";
+
+        // Visibility flag for local game UI elements (player names, clocks, etc.)
+        public bool IsLocalGame => CurrentGameMode == GameMode.Local2Player;
+
+        private void InitializeClocks(string timeControl)
+        {
+            int minutes = int.Parse(timeControl.Split(' ')[0]);
+
+            WhiteTimeRemaining = TimeSpan.FromMinutes(minutes);
+            BlackTimeRemaining = TimeSpan.FromMinutes(minutes);
+        }
+
+        public void StartNewLocalGame(string white, string black, string timeControl)
+        {
+            // Set mode
+            CurrentGameMode = GameMode.Local2Player;
+            IsOpeningMode = false;
+            _isGameOver = false;
+
+            // Defaults
+            WhitePlayerName = string.IsNullOrWhiteSpace(white) ? "White" : white;
+            BlackPlayerName = string.IsNullOrWhiteSpace(black) ? "Black" : black;
+
+            SelectedTimeControl = timeControl;
+
+            // Reset board state
+            ResetBoard();
+
+            // Reset move tracking
+            _moves.Clear();
+            _currentGameMoves.Clear();
+
+            // Set up clocks based on selected time control
+            InitializeClocks(timeControl);            
+
+            UpdateCheckHighlight();
+
+            // Notify UI of changes
+            OnPropertyChanged(nameof(WhiteDisplay));
+            OnPropertyChanged(nameof(BlackDisplay));
+            OnPropertyChanged(nameof(TimeDisplay));
+            OnPropertyChanged(nameof(IsLocalGame));
+        }
+
+        private void SaveLocalGame()
+        {
+            if (CurrentGameMode != GameMode.Local2Player)
+                return;
+
+            var game = new ChessGame
+            {
+                White = "White",
+                Black = "Black",
+                Result = GetGameResult(),
+                Pgn = GeneratePgn(),
+                GameType = "Local Game"
+            };
+
+            using (var db = new ChessDbContext())
+            {
+                db.LocalGames.Add(GameMapper.ToLocalEntity(game));
+                db.SaveChanges();
+            }
+        }
+
+        private string GetGameResult()
+        {
+            if (!_isGameOver)
+                return "*"; // game not finished
+
+            if (StatusMessage.Contains("White wins"))
+                return "1-0";
+
+            if (StatusMessage.Contains("Black wins"))
+                return "0-1";
+
+            if (StatusMessage.Contains("Draw") || StatusMessage.Contains("Stalemate"))
+                return "1/2-1/2";
+
+            return "*";
+        }
+
+        private string GeneratePgn()
+        {
+            if (_moves == null || !_moves.Any())
+                return "";
+
+            var result = GetGameResult();
+
+            var pgn = "";
+
+            // Headers 
+            pgn += $"[Event \"Local Game\"]\n";
+            pgn += $"[White \"White\"]\n";
+            pgn += $"[Black \"Black\"]\n";
+            pgn += $"[Result \"{result}\"]\n\n";
+
+            // Moves
+            for (int i = 0; i < _moves.Count; i++)
+            {
+                if (i % 2 == 0)
+                {
+                    int moveNumber = (i / 2) + 1;
+                    pgn += $"{moveNumber}. ";
+                }
+
+                pgn += _moves[i] + " ";
+            }
+
+            pgn += result;
+
+            return pgn.Trim();
+        }
         #endregion
     }
 }

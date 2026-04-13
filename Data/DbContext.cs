@@ -21,5 +21,6 @@ namespace ChessProject.Data
         public DbSet<MoveNoteEntity> MoveNotes { get; set; }
         public DbSet<RecentGameEntity> RecentGames { get; set; }
         public DbSet<SavedPositionEntity> SavedPositions { get; set; }
+        public DbSet<LocalGameEntity> LocalGames { get; set; }
     }
 }

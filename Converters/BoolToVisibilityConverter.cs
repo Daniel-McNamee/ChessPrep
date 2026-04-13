@@ -14,10 +14,14 @@ namespace ChessProject.Converters
     {
         public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
         {
-            if (value is bool isVisible && isVisible)
-                return Visibility.Visible;
+            if (!(value is bool isVisible))
+                return Visibility.Collapsed;
 
-            return Visibility.Collapsed;
+            // Reverses the visibility logic if the converter parameter is "Invert"
+            if (parameter?.ToString() == "Invert")
+                isVisible = !isVisible;
+
+            return isVisible ? Visibility.Visible : Visibility.Collapsed;
         }
 
         // Not needed for one-way bindings
