@@ -12,6 +12,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Threading;
 
 namespace ChessProject.ViewModels
 {
@@ -287,9 +288,18 @@ namespace ChessProject.ViewModels
         // Load selected opening
         public void LoadOpening(Openings opening)
         {
+            // Set mode flags to update UI state and visibility of controls
             CurrentGameMode = GameMode.Opening;
+
+            // Notify UI that mode changed so it can update visibility and bindings
+            OnPropertyChanged(nameof(IsGameMode));
+            OnPropertyChanged(nameof(IsOpeningMode));
+            OnPropertyChanged(nameof(IsLocalGame));
+
+            // Reset state
             IsOpeningMode = true;
             IsGameMode = false;
+            ClearModeState();
 
             // Ignore null selections
             if (opening == null)
@@ -400,14 +410,24 @@ namespace ChessProject.ViewModels
 
         private int _startingTimeSeconds;
 
+        // Load game from PGN data (used for replaying saved games)
         public void LoadGame(ChessGame game)
         {
+            // Set mode flags to update UI state
             CurrentGameMode = GameMode.Replay;
+
+            // Notify UI that mode changed so it can update visibility and bindings
+            OnPropertyChanged(nameof(IsGameMode));
+            OnPropertyChanged(nameof(IsOpeningMode));
+            OnPropertyChanged(nameof(IsLocalGame));
+
+            // Reset state
             IsOpeningMode = false;
             IsGameMode = true;
             _currentGame = game;
             _currentOpening = null;
             _isGameOver = false;
+            ClearModeState();
 
             _startingTimeSeconds = game.StartingTimeSeconds;
 
@@ -868,11 +888,46 @@ namespace ChessProject.ViewModels
             ResetCastlingRights();
             RebuildBoardToCurrentMove();
 
-            UpdateCurrentMoveHighlight();
+            // Reset clocks if we're in game mode (opening mode doesn't have clock data)
+            if (CurrentGameMode == GameMode.Local2Player && _selectedTimeOption != null)
+            {
+                InitializeClocks(_selectedTimeOption);
+            }
 
+            // Clear move data
+            _moves.Clear();
+            DisplayMoves.Clear();
+
+            UpdateCurrentMoveHighlight();
             UpdateCheckHighlight();
 
             OnPropertyChanged(nameof(CurrentMove));
+            StatusMessage = "";
+        }
+
+        // Clears all mode-specific state when switching modes to ensure clean transitions
+        private void ClearModeState() 
+        {
+            // Moves
+            _moves.Clear();
+            DisplayMoves.Clear();
+
+            // Clocks
+            _clockTimer?.Stop();
+            WhiteTimeRemaining = TimeSpan.Zero;
+            BlackTimeRemaining = TimeSpan.Zero;
+
+            // Local game data
+            WhitePlayerName = "";
+            BlackPlayerName = "";
+            SelectedTimeControl = "";
+
+            // Replay data
+            WhitePlayer = "";
+            BlackPlayer = "";
+            WhiteRating = 0;
+            BlackRating = 0;
+
             StatusMessage = "";
         }
 
@@ -2285,6 +2340,9 @@ namespace ChessProject.ViewModels
                 }
             }
 
+            // Generate notation before modifying board (Otherwise from square and isCapture info is lost)
+            string moveNotation = GenerateMoveNotation(from, to);
+
             // Move piece
             to.SetPiece(piece);
             from.ClearPiece();
@@ -2333,6 +2391,32 @@ namespace ChessProject.ViewModels
             CurrentTurn = CurrentTurn == PieceColour.White
                 ? PieceColour.Black
                 : PieceColour.White;
+
+            // Apply increment to player who just moved
+            if (CurrentTurn == PieceColour.White)
+            {
+                // Black just moved
+                BlackTimeRemaining += TimeSpan.FromSeconds(_incrementSeconds);
+            }
+            else
+            {
+                // White just moved
+                WhiteTimeRemaining += TimeSpan.FromSeconds(_incrementSeconds);
+            }
+
+            if (CurrentGameMode == GameMode.Local2Player)
+            {
+                var moveVm = new MoveViewModel(DisplayMoves.Count, moveNotation);
+
+                moveVm.NoteChanged += (m) =>
+                {
+                    SaveNote(m);
+                };
+
+                DisplayMoves.Add(moveVm); // Add move to display list for UI
+                _moves.Add(moveNotation); // Add move to PGN move list for saving
+                CurrentMoveIndex = DisplayMoves.Count - 1; // Update current move index to latest move for scroll to view in move list UI
+            }
 
             UpdateCheckHighlight();
             CheckGameEnd();
@@ -2474,36 +2558,181 @@ namespace ChessProject.ViewModels
             }
         }
 
-        public TimeSpan WhiteTimeRemaining { get; set; }
-        public TimeSpan BlackTimeRemaining { get; set; }
+        // Time remaining for each player, updated after each move and displayed in the UI
+        private TimeSpan _whiteTimeRemaining;
+        public TimeSpan WhiteTimeRemaining
+        {
+            get => _whiteTimeRemaining;
+            set
+            {
+                _whiteTimeRemaining = value;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(WhiteClockDisplay));
+            }
+        }
 
+        private TimeSpan _blackTimeRemaining;
+        public TimeSpan BlackTimeRemaining
+        {
+            get => _blackTimeRemaining;
+            set
+            {
+                _blackTimeRemaining = value;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(BlackClockDisplay));
+            }
+        }
+
+        private int _incrementSeconds;
+        private DispatcherTimer _clockTimer;
+        private TimeControlOption _selectedTimeOption;
+
+        // Display strings for player names and time control in the UI
         public string WhiteDisplay => $"White: {WhitePlayerName}";
         public string BlackDisplay => $"Black: {BlackPlayerName}";
         public string TimeDisplay => $"Time: {SelectedTimeControl}";
 
+        // Formatted clock display strings for the UI, showing minutes and seconds remaining for each player
+        public string WhiteClockDisplay => WhiteTimeRemaining.ToString(@"mm\:ss");
+        public string BlackClockDisplay => BlackTimeRemaining.ToString(@"mm\:ss");
+
+
         // Visibility flag for local game UI elements (player names, clocks, etc.)
         public bool IsLocalGame => CurrentGameMode == GameMode.Local2Player;
 
-        private void InitializeClocks(string timeControl)
-        {
-            int minutes = int.Parse(timeControl.Split(' ')[0]);
 
-            WhiteTimeRemaining = TimeSpan.FromMinutes(minutes);
-            BlackTimeRemaining = TimeSpan.FromMinutes(minutes);
+        // Initializes player clocks based on the selected time control
+        private void InitializeClocks(TimeControlOption time)
+        {
+            WhiteTimeRemaining = TimeSpan.FromMinutes(time.Minutes);
+            BlackTimeRemaining = TimeSpan.FromMinutes(time.Minutes);
+
+            _incrementSeconds = time.Increment;
+
+            // Start timer
+            _clockTimer?.Stop();
+            _clockTimer = null; // Ensure old timer is fully cleaned up
+
+            _clockTimer = new DispatcherTimer();
+            _clockTimer.Interval = TimeSpan.FromSeconds(1);
+            _clockTimer.Tick += OnClockTick;
+            _clockTimer.Start();
+
+            // Notify UI
+            OnPropertyChanged(nameof(WhiteClockDisplay));
+            OnPropertyChanged(nameof(BlackClockDisplay));
+
+            OnPropertyChanged(nameof(IsWhiteLowTime));
+            OnPropertyChanged(nameof(IsWhiteCriticalTime));
+            OnPropertyChanged(nameof(IsBlackLowTime));
+            OnPropertyChanged(nameof(IsBlackCriticalTime));
         }
 
-        public void StartNewLocalGame(string white, string black, string timeControl)
+
+        // Handles clock ticks, decrementing the active player's time and checking for time expiration to end the game
+        private void OnClockTick(object sender, EventArgs e)
+        {
+            if (_isGameOver)
+                return;
+
+            if (CurrentTurn == PieceColour.White)
+            {
+                WhiteTimeRemaining -= TimeSpan.FromSeconds(1);
+
+                if (WhiteTimeRemaining <= TimeSpan.Zero)
+                {
+                    WhiteTimeRemaining = TimeSpan.Zero;
+                    EndGameOnTime(PieceColour.White);
+                }
+            }
+            else
+            {
+                BlackTimeRemaining -= TimeSpan.FromSeconds(1);
+
+                if (BlackTimeRemaining <= TimeSpan.Zero)
+                {
+                    BlackTimeRemaining = TimeSpan.Zero;
+                    EndGameOnTime(PieceColour.Black);
+                }
+            }
+
+            // Notify UI of clock updates and low time warnings
+            OnPropertyChanged(nameof(WhiteClockDisplay));
+            OnPropertyChanged(nameof(WhiteSeconds));
+
+            OnPropertyChanged(nameof(BlackClockDisplay));
+            OnPropertyChanged(nameof(BlackSeconds));
+
+            OnPropertyChanged(nameof(IsWhiteLowTime));
+            OnPropertyChanged(nameof(IsWhiteCriticalTime));
+
+            OnPropertyChanged(nameof(IsBlackLowTime));
+            OnPropertyChanged(nameof(IsBlackCriticalTime));
+        }
+
+
+        // Exposes remaining time in seconds for use in UI bindings
+        public double WhiteSeconds => WhiteTimeRemaining.TotalSeconds;
+        public double BlackSeconds => BlackTimeRemaining.TotalSeconds;
+
+
+        // Indicates whether the clocks should be active and visible in the UI (only during a local 2-player game that is not over)
+        public bool IsClockActive => CurrentGameMode == GameMode.Local2Player && !_isGameOver;
+
+
+        // Flags for low time warnings in the UI, triggered when a player's remaining time falls below certain thresholds 
+        public bool IsWhiteLowTime => IsClockActive && WhiteTimeRemaining.TotalSeconds <= 30;
+
+        public bool IsWhiteCriticalTime => IsClockActive && WhiteTimeRemaining.TotalSeconds <= 15;
+
+        public bool IsBlackLowTime => IsClockActive && BlackTimeRemaining.TotalSeconds <= 30;
+
+        public bool IsBlackCriticalTime => IsClockActive && BlackTimeRemaining.TotalSeconds <= 15;
+
+
+
+        // Ends the game when a player's time runs out, updating the status message and saving the game
+        private void EndGameOnTime(PieceColour loser)
+        {
+            _isGameOver = true;
+            _clockTimer?.Stop();
+
+            StatusMessage = loser == PieceColour.White
+                ? "Black wins on time!"
+                : "White wins on time!";
+
+            StatusColor = Brushes.Red;
+
+            if (CurrentGameMode == GameMode.Local2Player)
+            {
+                SaveLocalGame();
+            }
+        }
+
+
+        // Starts a new local 2-player game with the given player names and time control, resetting the board and move history
+        public void StartNewLocalGame(string white, string black, TimeControlOption time)
         {
             // Set mode
             CurrentGameMode = GameMode.Local2Player;
+
+            // Notify UI of mode change to show/hide appropriate UI elements
+            OnPropertyChanged(nameof(IsGameMode));
+            OnPropertyChanged(nameof(IsOpeningMode));
+            OnPropertyChanged(nameof(IsLocalGame));
+
+            // Reset state
             IsOpeningMode = false;
+            IsGameMode = false;
             _isGameOver = false;
+            _selectedTimeOption = time;
+            ClearModeState();
 
             // Defaults
             WhitePlayerName = string.IsNullOrWhiteSpace(white) ? "White" : white;
             BlackPlayerName = string.IsNullOrWhiteSpace(black) ? "Black" : black;
 
-            SelectedTimeControl = timeControl;
+            SelectedTimeControl = time.Display;
 
             // Reset board state
             ResetBoard();
@@ -2513,7 +2742,7 @@ namespace ChessProject.ViewModels
             _currentGameMoves.Clear();
 
             // Set up clocks based on selected time control
-            InitializeClocks(timeControl);            
+            InitializeClocks(time);            
 
             UpdateCheckHighlight();
 
@@ -2524,20 +2753,24 @@ namespace ChessProject.ViewModels
             OnPropertyChanged(nameof(IsLocalGame));
         }
 
+
+        // Saves the completed local game to the database with player names, result and PGN
         private void SaveLocalGame()
         {
             if (CurrentGameMode != GameMode.Local2Player)
                 return;
 
+            // Create ChessGame model from current game data
             var game = new ChessGame
             {
-                White = "White",
-                Black = "Black",
+                White = WhitePlayerName,
+                Black = BlackPlayerName,
+                GameType = SelectedTimeControl,
                 Result = GetGameResult(),
-                Pgn = GeneratePgn(),
-                GameType = "Local Game"
+                Pgn = GeneratePgn()
             };
 
+            // Save to database
             using (var db = new ChessDbContext())
             {
                 db.LocalGames.Add(GameMapper.ToLocalEntity(game));
@@ -2545,10 +2778,12 @@ namespace ChessProject.ViewModels
             }
         }
 
+
+        // Determines the game result based on the status message, returning standard PGN result strings ("1-0", "0-1", "1/2-1/2") or "*" if the game is not finished
         private string GetGameResult()
         {
             if (!_isGameOver)
-                return "*"; // game not finished
+                return "*"; // Game not finished
 
             if (StatusMessage.Contains("White wins"))
                 return "1-0";
@@ -2559,9 +2794,130 @@ namespace ChessProject.ViewModels
             if (StatusMessage.Contains("Draw") || StatusMessage.Contains("Stalemate"))
                 return "1/2-1/2";
 
+            if (StatusMessage.Contains("time"))
+                return StatusMessage.Contains("White") ? "1-0" : "0-1";
+
             return "*";
         }
 
+
+        // Generates a simple move notation string, which can be displayed in the UI and saved in the move history
+        private string GenerateMoveNotation(SquareViewModel from, SquareViewModel to)
+        {
+            var piece = from.Piece;
+
+            // Check if move is a capture (either normal capture or en passant)
+            bool isEnPassant = piece.Type == PieceType.Pawn &&
+                   _enPassantTarget != null &&
+                   to.Row == _enPassantTarget.Row &&
+                   to.Column == _enPassantTarget.Column;
+
+            bool isCapture = to.HasPiece || isEnPassant;
+
+            // Castling
+            if (piece.Type == PieceType.King)
+            {
+                if (from.Column == 4 && to.Column == 6)
+                    return "O-O";
+
+                if (from.Column == 4 && to.Column == 2)
+                    return "O-O-O";
+            }
+
+            string notation = "";
+
+            // Piece letter (pawn = empty)
+            notation += GetPieceLetter(piece.Type);
+
+            // Disambiguation: If another piece of the same type can move to the same square, specify the file/rank of the moving piece
+            if (piece.Type != PieceType.Pawn && NeedsDisambiguation(from, to))
+            {
+                notation += (char)('a' + from.Column); // file-based disambiguation
+            }
+
+            // Pawn capture needs file (e.g. exd5)
+            if (piece.Type == PieceType.Pawn && isCapture)
+            {
+                notation += (char)('a' + from.Column);
+            }
+
+            // Capture marker
+            if (isCapture)
+                notation += "x";
+
+            // Destination square
+            notation += GetSquareName(to);
+
+            // TEMP move to check for check
+            var captured = to.Piece;
+            to.SetPiece(piece);
+            from.ClearPiece();
+
+            var service = new MoveGenerationService();
+            var opponent = piece.Colour == PieceColour.White ? PieceColour.Black : PieceColour.White;
+
+            bool isCheck = service.IsKingInCheck(Squares, opponent);
+
+            // Undo move
+            from.SetPiece(piece);
+            to.SetPiece(captured);
+
+            if (isCheck)
+                notation += "+";
+
+            return notation;
+        }
+
+
+        // Converts board coordinates to standard algebraic notation for move notation generation
+        private string GetSquareName(SquareViewModel square)
+        {
+            char file = (char)('a' + square.Column);
+            int rank = 8 - square.Row;
+            return $"{file}{rank}";
+        }
+
+        // Returns the letter for a piece type (K, Q, R, B, N) or empty string for pawns, used in move notation generation
+        private string GetPieceLetter(PieceType type)
+        {
+            switch (type)
+            {
+                case PieceType.King: return "K";
+                case PieceType.Queen: return "Q";
+                case PieceType.Rook: return "R";
+                case PieceType.Bishop: return "B";
+                case PieceType.Knight: return "N";
+                default: return "";
+            }
+        }
+
+
+        // Checks if a move requires disambiguation in SAN notation (e.g. if two knights can move to the same square, the move must specify which one)
+        private bool NeedsDisambiguation(SquareViewModel from, SquareViewModel to)
+        {
+            var piece = from.Piece;
+
+            var samePieces = Squares.Where(s =>
+                s != from &&
+                s.HasPiece &&
+                s.Piece.Type == piece.Type &&
+                s.Piece.Colour == piece.Colour);
+
+            var service = new MoveGenerationService();
+
+            foreach (var other in samePieces)
+            {
+                var moves = service.GetLegalMoves(other, Squares, _enPassantTarget);
+
+                if (moves.Any(m => m.Row == to.Row && m.Column == to.Column))
+                    return true;
+            }
+
+            return false;
+        }
+
+
+        // Generates a PGN string for the current game based on the move history and result, which can be saved to the database and displayed in the UI
         private string GeneratePgn()
         {
             if (_moves == null || !_moves.Any())
@@ -2572,9 +2928,9 @@ namespace ChessProject.ViewModels
             var pgn = "";
 
             // Headers 
-            pgn += $"[Event \"Local Game\"]\n";
-            pgn += $"[White \"White\"]\n";
-            pgn += $"[Black \"Black\"]\n";
+            pgn += $"[TimeControl \"{SelectedTimeControl}\"]\n";
+            pgn += $"[White \"{WhitePlayerName}\"]\n";
+            pgn += $"[Black \"{BlackPlayerName}\"]\n";
             pgn += $"[Result \"{result}\"]\n\n";
 
             // Moves

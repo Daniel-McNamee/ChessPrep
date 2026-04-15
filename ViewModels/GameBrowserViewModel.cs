@@ -36,6 +36,7 @@ namespace ChessProject.ViewModels
         public ICommand DeleteFavouritePlayerCommand { get; }
         public ICommand ShowFavouritePlayersCommand { get; }
         public ICommand ShowLocalGamesCommand { get; }
+        public ICommand DeleteLocalGameCommand { get; }
 
         // Event to notify when a game is selected for viewing
         public event Action<ChessGame> GameSelected;
@@ -93,6 +94,7 @@ namespace ChessProject.ViewModels
                 DisplayGames.Add(game);
         }
 
+        // Flag to indicate whether the UI is currently showing saved games
         private bool _isSavedMode;
         public bool IsSavedMode
         {
@@ -104,9 +106,11 @@ namespace ChessProject.ViewModels
             }
         }
 
+        // Displays saved games by loading them from the database and populating the DisplayGames collection
         private void ShowSavedGames()
         {
             IsSavedMode = true;
+            IsLocalMode = false;
 
             LoadSavedGames();
 
@@ -115,9 +119,11 @@ namespace ChessProject.ViewModels
                 DisplayGames.Add(game);
         }
 
+        // Displays recently viewed games by loading them from the database and populating the DisplayGames collection
         private void ShowRecentGames()
         {
             IsSavedMode = false;
+            IsLocalMode = false;
 
             LoadRecentGames();
 
@@ -239,6 +245,7 @@ namespace ChessProject.ViewModels
             await ClearStatusMessage();
         }
 
+        // Deletes a favourite player from the local database and removes it from the FavouritePlayers collection
         private void DeleteFavouritePlayer(string player)
         {
             if (string.IsNullOrEmpty(player))
@@ -318,6 +325,7 @@ namespace ChessProject.ViewModels
             OnlineGames = new ObservableCollection<ChessGame>();
             SavedGames = new ObservableCollection<ChessGame>();
             RecentGames = new ObservableCollection<ChessGame>();
+            LocalGames = new ObservableCollection<LocalGameEntity>();
             DisplayGames = new ObservableCollection<ChessGame>();
             FavouritePlayers = new ObservableCollection<string>();
 
@@ -332,6 +340,7 @@ namespace ChessProject.ViewModels
             DeleteFavouritePlayerCommand = new RelayCommand<string>(DeleteFavouritePlayer);
             ShowFavouritePlayersCommand = new RelayCommand(ShowFavouritePlayers);
             ShowLocalGamesCommand = new RelayCommand(ShowLocalGames);
+            DeleteLocalGameCommand = new RelayCommand<ChessGame>(DeleteLocalGame);
         }
 
         // Fetches the game archives for the specified username from the Chess.com API and populates the Archives collection
@@ -380,7 +389,7 @@ namespace ChessProject.ViewModels
             }
         }
 
-
+        // Deletes a saved game from the local database and removes it from the displayed list
         private void DeleteSavedGame(ChessGame game)
         {
             if (game == null)
@@ -400,13 +409,17 @@ namespace ChessProject.ViewModels
             DisplayGames.Remove(game);
         }
 
+        // Loads locally saved games from the database and displays them in the UI
         private void ShowLocalGames()
         {
             IsSavedMode = false;
+            IsLocalMode = true;
 
+            DisplayGames.Clear();
             LoadLocalGames();
         }
 
+        // Fetches locally saved games from the database, populates the LocalGames collection and updates the DisplayGames collection
         private void LoadLocalGames()
         {
             using (var db = new ChessDbContext())
@@ -425,6 +438,38 @@ namespace ChessProject.ViewModels
                     DisplayGames.Add(GameMapper.ToModel(game));
                 }
             }
+        }
+
+        // flag to indicate whether the UI is currently showing local games 
+        private bool _isLocalMode;
+        public bool IsLocalMode
+        {
+            get => _isLocalMode;
+            set
+            {
+                _isLocalMode = value;
+                OnPropertyChanged();
+            }
+        }
+
+        // Deletes a locally saved game from the database and removes it from the displayed list
+        private void DeleteLocalGame(ChessGame game)
+        {
+            if (game == null)
+                return;
+
+            using (var db = new ChessDbContext())
+            {
+                var entity = db.LocalGames.FirstOrDefault(g => g.PGN == game.Pgn);
+
+                if (entity != null)
+                {
+                    db.LocalGames.Remove(entity);
+                    db.SaveChanges();
+                }
+            }
+
+            DisplayGames.Remove(game);
         }
 
     }

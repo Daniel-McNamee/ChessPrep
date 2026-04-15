@@ -134,11 +134,9 @@
     <Compile Include="ViewModels\MoveItem.cs" />
     <Compile Include="ViewModels\MoveViewModel.cs" />
     <Compile Include="ViewModels\PlayViewModel.cs" />
+    <Compile Include="ViewModels\TimeControlOption.cs" />
     <Compile Include="Views\GameBrowserView.xaml.cs">
       <DependentUpon>GameBrowserView.xaml</DependentUpon>
-    </Compile>
-    <Compile Include="Views\LocalGameSetupView.xaml.cs">
-      <DependentUpon>LocalGameSetupView.xaml</DependentUpon>
     </Compile>
     <Compile Include="Views\OpeningBrowserView.xaml.cs">
       <DependentUpon>OpeningBrowserView.xaml</DependentUpon>
@@ -151,10 +149,6 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Views\GameBrowserView.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="Views\LocalGameSetupView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>

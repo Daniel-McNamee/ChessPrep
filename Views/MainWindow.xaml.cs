@@ -8,7 +8,7 @@ namespace ChessProject.Views
         public MainWindow()
         {
             InitializeComponent();
-            DataContext = new MainViewModel();
+            DataContext = new MainViewModel(); // Set the DataContext to an instance of MainViewModel
         }
     }
 }

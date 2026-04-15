@@ -44,7 +44,7 @@
                     <ColumnDefinition Width="120"/>
                     <!-- Gap -->
                     <ColumnDefinition Width="70"/>
-                    <!-- Online -->
+                    <!-- Local Games -->
                     <ColumnDefinition Width="110"/>
                     <!-- Saved -->
                     <ColumnDefinition Width="110"/>
@@ -74,8 +74,8 @@
                         Command="{Binding ShowFavouritePlayersCommand}"/>
 
                 <Button Grid.Column="6"
-                        Content="Online"
-                        Command="{Binding ShowOnlineCommand}"
+                        Content="Local Games"
+                        Command="{Binding ShowLocalGamesCommand}"
                         Margin="0,0,10,0"/>
 
                 <Button Grid.Column="7"
@@ -141,6 +141,7 @@
                                                Padding="4"
                                                VerticalAlignment="Center"/>
 
+                                    <!-- Delete Favourite Player -->
                                     <Button Grid.Column="1"
                                             Content="✕"
                                             Width="18"
@@ -210,6 +211,7 @@
                                                Padding="4"
                                                VerticalAlignment="Center"/>
 
+                                    <!-- Delete Game -->
                                     <Button Grid.Column="1"
                                             Content="✕"
                                             Width="18"
@@ -220,33 +222,41 @@
                                             FontWeight="Bold"
                                             Cursor="Hand"
                                             VerticalAlignment="Center"
-                                            Command="{Binding DataContext.DeleteSavedGameCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
-                                            CommandParameter="{Binding}"
-                                            Visibility="{Binding DataContext.IsSavedMode, RelativeSource={RelativeSource AncestorType=ListBox}, Converter={StaticResource BoolToVisibilityConverter}}">
-
-                                        <Button.Template>
-                                            <ControlTemplate TargetType="Button">
-                                                <TextBlock Text="{TemplateBinding Content}"
-                                                           Foreground="{TemplateBinding Foreground}"
-                                                           HorizontalAlignment="Center"
-                                                           VerticalAlignment="Center"/>
-                                            </ControlTemplate>
-                                        </Button.Template>
+                                            CommandParameter="{Binding}">
 
                                         <Button.Style>
                                             <Style TargetType="Button">
+                                                <Setter Property="Command"
+                                                        Value="{Binding DataContext.DeleteSavedGameCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"/>
+                                                <Setter Property="Visibility" Value="Collapsed"/>
                                                 <Setter Property="Foreground" Value="#888"/>
                                                 <Setter Property="Opacity" Value="0.6"/>
 
                                                 <Style.Triggers>
+
+                                                    <!-- Saved -->
+                                                    <DataTrigger Binding="{Binding DataContext.IsSavedMode, RelativeSource={RelativeSource AncestorType=ListBox}}" Value="True">
+                                                        <Setter Property="Visibility" Value="Visible"/>
+                                                        <Setter Property="Command"
+                                                                Value="{Binding DataContext.DeleteSavedGameCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"/>
+                                                    </DataTrigger>
+
+                                                    <!-- Local -->
+                                                    <DataTrigger Binding="{Binding DataContext.IsLocalMode, RelativeSource={RelativeSource AncestorType=ListBox}}" Value="True">
+                                                        <Setter Property="Visibility" Value="Visible"/>
+                                                        <Setter Property="Command"
+                                                                Value="{Binding DataContext.DeleteLocalGameCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"/>
+                                                    </DataTrigger>
+
+                                                    <!-- Hover -->
                                                     <Trigger Property="IsMouseOver" Value="True">
                                                         <Setter Property="Foreground" Value="#FF5555"/>
                                                         <Setter Property="Opacity" Value="1"/>
                                                     </Trigger>
+
                                                 </Style.Triggers>
                                             </Style>
                                         </Button.Style>
-
                                     </Button>
                                 </Grid>
                             </DataTemplate>

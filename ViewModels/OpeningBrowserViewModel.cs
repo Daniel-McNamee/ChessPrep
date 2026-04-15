@@ -48,6 +48,7 @@ namespace ChessProject.ViewModels
             }
         }
 
+        // Colour filter (All/White/Black):
         private string _selectedColour;
         public string SelectedColour
         {
@@ -113,6 +114,7 @@ namespace ChessProject.ViewModels
             }
         }
 
+        // Load favourite openings from database
         private void LoadFavouriteOpenings()
         {
             FavouriteOpenings.Clear();
@@ -180,6 +182,7 @@ namespace ChessProject.ViewModels
                 FilteredOpenings.Add(opening);
         }
 
+        // Sorting logic based on current sort field and direction
         private IEnumerable<Openings> ApplySorting(IEnumerable<Openings> query)
         {
             switch (_currentSortField)
@@ -209,6 +212,7 @@ namespace ChessProject.ViewModels
             }
         }
 
+        // User clicks on column header to sort by that column
         private void SetSort(string field)
         {
             if (_currentSortField == field)
@@ -231,6 +235,7 @@ namespace ChessProject.ViewModels
             ApplyFilters(); // Reapply sorting to list
         }
 
+        // Show only favourite openings in the UI
         private void ShowFavouriteOpenings()
         {
             LoadFavouriteOpenings();
@@ -238,33 +243,36 @@ namespace ChessProject.ViewModels
             ApplyFilters();
         }
 
+        // Show all openings (remove favourite filter)
         private void ShowAllOpenings()
         {
             _showingFavourites = false;
             ApplyFilters();
         }
 
-        // Command Logic:
+        // User clicks "Load" button to load selected opening into BoardViewModel
         private void LoadSelectedOpening()
         {
             OpeningSelected?.Invoke(SelectedOpening); // Notify BoardViewModel to load chosen opening
         }
 
+        // Load button enabled only when an opening is selected
         private bool CanLoadOpening()
         {
             return SelectedOpening != null; // Load button enabled only when an opening is selected
         }
 
-        public ICommand SortByOpeningCommand =>
+        // Command Logic:
+        public ICommand SortByOpeningCommand => // Command for sorting by opening name
             new RelayCommand(() => SetSort("Opening"));
 
-        public ICommand SortByWhiteWinCommand =>
+        public ICommand SortByWhiteWinCommand => // Command for sorting by white win percentage
             new RelayCommand(() => SetSort("WhiteWin"));
 
-        public ICommand SortByBlackWinCommand =>
+        public ICommand SortByBlackWinCommand => // Command for sorting by black win percentage
             new RelayCommand(() => SetSort("BlackWin"));
 
-        public ICommand SortByEcoCommand =>
+        public ICommand SortByEcoCommand => // Command for sorting by ECO code
             new RelayCommand(() => SetSort("ECO"));
     }
 }

@@ -6,7 +6,8 @@
              KeyDown="UserControl_KeyDown">
 
     <UserControl.Resources>
-        <conv:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
+        <!-- Converter to toggle visibility based on boolean properties -->
+        <conv:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter"/> 
     </UserControl.Resources>
 
     <Grid>
@@ -24,6 +25,7 @@
                     Height="560"
                     Background="Transparent">
 
+                <!-- Using an ItemsControl with a UniformGrid to create the 8x8 chess board -->
                 <ItemsControl ItemsSource="{Binding VisualSquares}">
                     <ItemsControl.ItemsPanel>
                         <ItemsPanelTemplate>
@@ -31,6 +33,7 @@
                         </ItemsPanelTemplate>
                     </ItemsControl.ItemsPanel>
 
+                    <!-- Each square is represented by a Border that changes color based on its state and contains an Image for the piece -->
                     <ItemsControl.ItemTemplate>
                         <DataTemplate>
                             <Border Width="70"
@@ -38,28 +41,33 @@
                                     Background="{Binding SquareColor}"
                                     BorderThickness="3">
 
+                                <!-- Input binding to handle square clicks, passing the square's data context as a parameter to the command in the ViewModel -->
                                 <Border.InputBindings>
                                     <MouseBinding Gesture="LeftClick"
                                                   Command="{Binding DataContext.SquareClickCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
                                                   CommandParameter="{Binding}" />
                                 </Border.InputBindings>
 
+                                <!-- Style triggers to change the border color based on the square's state-->
                                 <Border.Style>
                                     <Style TargetType="Border">
                                         <Setter Property="BorderBrush" Value="Transparent"/>
 
                                         <Style.Triggers>
 
+                                            <!-- Last Move Normal -->
                                             <DataTrigger Binding="{Binding LastMoveHighlight}"
                                                          Value="Normal">
                                                 <Setter Property="BorderBrush" Value="#FFD700"/>
                                             </DataTrigger>
 
+                                            <!-- Last Move Capture -->
                                             <DataTrigger Binding="{Binding LastMoveHighlight}"
                                                          Value="Capture">
                                                 <Setter Property="BorderBrush" Value="#FF4C4C"/>
                                             </DataTrigger>
 
+                                            <!-- In Check -->
                                             <DataTrigger Binding="{Binding IsInCheck}" Value="True">
                                                 <Setter Property="BorderBrush" Value="#FF4C4C"/>
                                                 <Setter Property="BorderThickness" Value="3"/>
@@ -69,6 +77,7 @@
                                     </Style>
                                 </Border.Style>
 
+                                <!-- Piece Image -->
                                 <Image Source="{Binding PieceImagePath}"
                                        Stretch="Uniform"/>
 
@@ -161,28 +170,111 @@
 
                 </StackPanel>
 
-                
+
                 <!-- LOCAL GAME INFO -->
                 <StackPanel Visibility="{Binding IsLocalGame, Converter={StaticResource BoolToVisibilityConverter}}"
-            Margin="0,0,0,16">
+                            Margin="0,0,0,16">
 
                     <TextBlock Text="Local Game"
-               FontSize="16"
-               FontWeight="Bold"
-               Foreground="White"
-               Margin="0,0,0,8"/>
+                               FontSize="16"
+                               FontWeight="Bold"
+                               Foreground="White"
+                               Margin="0,0,0,8"/>
 
-                    <TextBlock Text="{Binding WhiteDisplay}"
-               Foreground="White"
-               Margin="0,2"/>
+                    <!-- WHITE CLOCK -->
+                    <Border Margin="0,5,0,5"
+                            Padding="6"
+                            CornerRadius="6">
 
-                    <TextBlock Text="{Binding BlackDisplay}"
-               Foreground="White"
-               Margin="0,2"/>
+                        <Border.Style>
+                            <Style TargetType="Border">
+                                <Setter Property="Background" Value="#2A2A2A"/>
+                                <Setter Property="BorderBrush" Value="Transparent"/>
+                                <Setter Property="BorderThickness" Value="2"/>
 
+                                <!-- Style triggers to highlight the active player's clock and indicate low/critical time -->
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding CurrentTurn}" Value="White">
+                                        <Setter Property="BorderBrush" Value="#00C896"/>
+                                        <Setter Property="Background" Value="#1F3A33"/>
+                                    </DataTrigger>
+                                
+                                    <!-- WARNING (30s) -->
+                                    <DataTrigger Binding="{Binding IsWhiteLowTime}" Value="True">
+                                        <Setter Property="Background" Value="#5A3A1F"/>
+                                    </DataTrigger>
+
+                                    <!-- DANGER (15s) -->
+                                    <DataTrigger Binding="{Binding IsWhiteCriticalTime}" Value="True">
+                                        <Setter Property="Background" Value="#5A1F1F"/>
+                                        <Setter Property="BorderBrush" Value="Red"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Border.Style>
+
+                        <StackPanel>
+                            <TextBlock Text="{Binding WhiteDisplay}"
+                                       Foreground="White"
+                                       FontSize="12"/>
+
+                            <TextBlock Text="{Binding WhiteClockDisplay}"
+                                       FontSize="22"
+                                       FontWeight="Bold"
+                                       Foreground="White"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- BLACK CLOCK -->
+                    <Border Margin="0,5,0,10"
+                            Padding="6"
+                            CornerRadius="6">
+
+                        <Border.Style>
+                            <Style TargetType="Border">
+                                <Setter Property="Background" Value="#2A2A2A"/>
+                                <Setter Property="BorderBrush" Value="Transparent"/>
+                                <Setter Property="BorderThickness" Value="2"/>
+
+                                <!-- Style triggers to highlight the active player's clock and indicate low/critical time -->
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding CurrentTurn}" Value="Black">
+                                        <Setter Property="BorderBrush" Value="#00C896"/>
+                                        <Setter Property="Background" Value="#1F3A33"/>
+                                    </DataTrigger>
+
+                                    <!-- WARNING (30s) -->
+                                    <DataTrigger Binding="{Binding IsBlackLowTime}" Value="True">
+                                        <Setter Property="Background" Value="#5A3A1F"/>
+                                    </DataTrigger>
+
+                                    <!-- DANGER (15s) -->
+                                    <DataTrigger Binding="{Binding IsBlackCriticalTime}" Value="True">
+                                        <Setter Property="Background" Value="#5A1F1F"/>
+                                        <Setter Property="BorderBrush" Value="Red"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Border.Style>
+
+                        <StackPanel>
+                            <TextBlock Text="{Binding BlackDisplay}"
+                                       Foreground="White"
+                                       FontSize="12"/>
+
+                            <TextBlock Text="{Binding BlackClockDisplay}"
+                                       FontSize="22"
+                                       FontWeight="Bold"
+                                       Foreground="White"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- TIME CONTROL -->
                     <TextBlock Text="{Binding TimeDisplay}"
-               Foreground="White"
-               Margin="0,6,0,0"/>
+                               Foreground="#BBBBBB"
+                               FontSize="12"
+                               Margin="0,0,0,10"/>
+
                 </StackPanel>
 
 
@@ -272,6 +364,7 @@
                         </DataTemplate>
                     </ListBox.ItemTemplate>
 
+                    <!-- Style triggers to highlight the current move in the move list -->
                     <ListBox.ItemContainerStyle>
                         <Style TargetType="ListBoxItem">
                             <Setter Property="Background" Value="Transparent"/>
@@ -294,12 +387,14 @@
                         Margin="5"
                         Command="{Binding SaveGameCommand}"/>
 
+                <!-- Favourite Opening Button -->
                 <Button Content="★ Favourite Opening"
                         Visibility="{Binding IsOpeningMode, Converter={StaticResource BoolToVisibilityConverter}}"
                         Command="{Binding SaveFavouriteOpeningCommand}"
                         Width="150"
                         Margin="5"/>
 
+                <!-- Status Message that displays things like save state and game result -->
                 <TextBlock Text="{Binding StatusMessage}"
                            Foreground="{Binding StatusColor}"
                            FontWeight="Bold"

@@ -6,6 +6,7 @@ namespace ChessProject.Services
 {
     public static class PgnParser
     {
+        // Extracts the list of moves from a PGN string, removing comments and move numbers.
         public static List<string> ExtractMoves(string pgn)
         {
             // Remove comments (including clocks)
@@ -27,6 +28,7 @@ namespace ChessProject.Services
                 .ToList();
         }
 
+        // Extracts clock times from PGN comments like "{ [%clk 0:01:23] }"
         public static List<string> ExtractClocks(string pgn)
         {
             var clocks = new List<string>();

@@ -8,8 +8,10 @@ namespace ChessProject.Services
 {
     public class ChessComService
     {
+        // HttpClient instance for making API requests
         private readonly HttpClient _client;
 
+        // Constructor initializes HttpClient with a User-Agent header to avoid being blocked by the Chess.com API
         public ChessComService()
         {
             _client = new HttpClient();
@@ -20,6 +22,7 @@ namespace ChessProject.Services
             );
         }
 
+        // Fetches the list of game archive URLs for a given username
         public async Task<List<string>> GetGameArchives(string username)
         {
             var response = await _client.GetAsync(
@@ -43,6 +46,7 @@ namespace ChessProject.Services
             return archives;
         }
 
+        // Fetches games from a given archive URL and returns a list of ChessGame objects
         public async Task<List<ChessGame>> GetGamesFromArchive(string archiveUrl, string username)
         {
             var response = await _client.GetAsync(archiveUrl);
@@ -50,8 +54,10 @@ namespace ChessProject.Services
             if (!response.IsSuccessStatusCode)
                 return new List<ChessGame>();
 
+            // Read the response content as a string
             string json = await response.Content.ReadAsStringAsync();
 
+            // Parse the JSON response into a JObject for easier access to its properties
             JObject data = JObject.Parse(json);
 
             var games = new List<ChessGame>();
@@ -60,6 +66,7 @@ namespace ChessProject.Services
             if (gameArray == null)
                 return games;
 
+            // Iterate through each game in the games array and extract relevant information to create ChessGame objects
             foreach (var game in gameArray)
             {
                 var pgn = game["pgn"]?.ToString() ?? "";
@@ -81,6 +88,7 @@ namespace ChessProject.Services
 
                 int.TryParse(timeControlString, out startingTime);
 
+                // Create a new ChessGame object with the extracted information and add it to the list of games
                 games.Add(new ChessGame
                 {
                     White = whiteName,

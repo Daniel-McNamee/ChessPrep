@@ -7,8 +7,8 @@
              mc:Ignorable="d">
 
     <UserControl.Resources>
-        <conv:BoolToArrowConverter x:Key="BoolToArrowConverter"/>
-        <conv:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
+        <conv:BoolToArrowConverter x:Key="BoolToArrowConverter"/> <!-- Converts boolean values to arrow symbols for sorting -->
+        <conv:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter"/> <!-- Converts boolean values to Visibility for UI elements -->
     </UserControl.Resources>
 
 
@@ -99,7 +99,8 @@
                             </GridViewColumn.Header>
 
                             <GridViewColumn.DisplayMemberBinding>
-                                <Binding Path="Opening"/>
+                                <!-- Display the opening name -->
+                                <Binding Path="Opening"/> 
                             </GridViewColumn.DisplayMemberBinding>
                         </GridViewColumn>
 
@@ -127,6 +128,7 @@
                             </GridViewColumn.Header>
 
                             <GridViewColumn.DisplayMemberBinding>
+                                <!-- Display the ECO code -->
                                 <Binding Path="ECO"/>
                             </GridViewColumn.DisplayMemberBinding>
                         </GridViewColumn>
@@ -155,6 +157,7 @@
                             </GridViewColumn.Header>
 
                             <GridViewColumn.DisplayMemberBinding>
+                                <!-- Display the percentage of games won by White for this opening -->
                                 <Binding Path="WhiteWinPercent"/>
                             </GridViewColumn.DisplayMemberBinding>
                         </GridViewColumn>
@@ -188,6 +191,7 @@
                             </GridViewColumn.Header>
 
                             <GridViewColumn.DisplayMemberBinding>
+                                <!-- Display the percentage of games won by Black for this opening -->
                                 <Binding Path="BlackWinPercent"/>
                             </GridViewColumn.DisplayMemberBinding>
                         </GridViewColumn>

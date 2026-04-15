@@ -8,7 +8,7 @@ namespace ChessProject.Views
         public OpeningBrowserView()
         {
             InitializeComponent();
-            DataContext = new OpeningBrowserViewModel();
+            DataContext = new OpeningBrowserViewModel(); // Set the DataContext to an instance of the OpeningBrowserViewModel
         }
     }
 }

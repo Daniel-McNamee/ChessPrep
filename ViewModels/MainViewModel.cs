@@ -53,6 +53,7 @@ namespace ChessProject.ViewModels
             SelectedTabIndex = 0;
         }
 
+        // When game is selected load it into the board and switch to the board tab
         private void OnGameSelected(ChessGame game)
         {
             BoardViewModel.LoadGame(game);

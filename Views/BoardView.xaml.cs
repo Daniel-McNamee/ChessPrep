@@ -8,6 +8,7 @@ namespace ChessProject.Views
 {
     public partial class BoardView : UserControl
     {
+        // Constructor
         public BoardView()
         {
             InitializeComponent();
@@ -20,6 +21,7 @@ namespace ChessProject.Views
             };
         }
 
+        // Subscribe to ViewModel property changes when DataContext is set
         private void OnDataContextChanged(object sender, DependencyPropertyChangedEventArgs e)
         {
             if (e.NewValue is INotifyPropertyChanged vm)
@@ -28,6 +30,7 @@ namespace ChessProject.Views
             }
         }
 
+        // Scroll move list to current move when it changes
         private void ViewModel_PropertyChanged(object sender, PropertyChangedEventArgs e)
         {
             if (e.PropertyName == "CurrentMoveIndex")

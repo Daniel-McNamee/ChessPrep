@@ -14,11 +14,13 @@ namespace ChessProject.Services
             IEnumerable<SquareViewModel> squares,
             SquareViewModel enPassantTarget = null)
         {
-            var moves = new List<SquareViewModel>();
+            // List to hold potential moves
+            var moves = new List<SquareViewModel>(); 
 
             if (from == null || !from.HasPiece)
                 return moves;
 
+            // Generate moves based on piece type
             switch (from.Piece.Type)
             {
                 case PieceType.Pawn:
@@ -49,6 +51,7 @@ namespace ChessProject.Services
             return moves;
         }
 
+        // Main method to filter moves to only legal ones (not leaving king in check)
         public List<SquareViewModel> GetLegalMoves(
             SquareViewModel from,
             IEnumerable<SquareViewModel> squares,
@@ -443,7 +446,7 @@ namespace ChessProject.Services
         }
         #endregion
 
-        // Helper to make a temporary move and return captured piece (if any) for undoing later
+        // Helper to make a temporary move and return captured piece (if any) for undoing
         private (ChessPiece capturedPiece, SquareViewModel from, SquareViewModel to)
         MakeTemporaryMove(SquareViewModel from, SquareViewModel to)
         {
@@ -464,8 +467,6 @@ namespace ChessProject.Services
             from.SetPiece(to.Piece);
             to.SetPiece(capturedPiece);
         }
-
-
 
     }
 }

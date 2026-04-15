@@ -5,6 +5,7 @@ namespace ChessProject.Models
 {
     public class ChessGame
     {
+        // Game details
         public string White { get; set; }
         public int WhiteElo { get; set; }
 
@@ -15,11 +16,12 @@ namespace ChessProject.Models
         public string Date { get; set; }
 
         public string GameType { get; set; }
-        public string PerspectivePlayer { get; set; }
+        public string PerspectivePlayer { get; set; } // Player perspective for result interpretation
         public int StartingTimeSeconds { get; set; }
-        public bool HasNotes { get; set; }
+        public bool HasNotes { get; set; } // Indicates if the game has annotations/notes
 
         public string Pgn { get; set; }
+
 
         // Converts game result into player relative result (Win/Loss/Draw)
         public string GetResultForPlayer()
@@ -67,6 +69,7 @@ namespace ChessProject.Models
             }
         }
 
+        // Checks if the result is a draw type result
         private bool IsDraw(string result)
         {
             return result == "stalemate"
@@ -77,10 +80,12 @@ namespace ChessProject.Models
                 || result == "timevsinsufficient";
         }
 
+        // Provides a user friendly string representation of the game
         public override string ToString()
         {
             string resultText;
 
+            // Determine result text based on perspective
             if (!string.IsNullOrEmpty(PerspectivePlayer))
             {
                 bool isWhite = PerspectivePlayer.Equals(White, StringComparison.OrdinalIgnoreCase);
@@ -124,8 +129,10 @@ namespace ChessProject.Models
                 }
             }
 
+            // Format: "White (WhiteElo) vs Black (BlackElo) • GameType • Result"
             var text = $"{White} ({WhiteElo}) vs {Black} ({BlackElo}) • {GameType} • {resultText}";
 
+            // Mark annotated games
             if (HasNotes)
                 text += " (Annotated)";
 
