@@ -380,12 +380,19 @@
 
                 </ListBox>
 
-                <!-- Save Game Button -->
+                <!-- Save Game Button Favourites -->
                 <Button Content="💾 Save Game"
                         Visibility="{Binding IsGameMode, Converter={StaticResource BoolToVisibilityConverter}}"
                         Width="100"
                         Margin="5"
                         Command="{Binding SaveGameCommand}"/>
+
+                <!-- Save Game Button Local Games -->
+                <Button Content="💾 Save Game"
+                        Visibility="{Binding IsLocalGame, Converter={StaticResource BoolToVisibilityConverter}}"
+                        Width="100"
+                        Margin="5"
+                        Command="{Binding SaveLocalGameCommand}"/>
 
                 <!-- Favourite Opening Button -->
                 <Button Content="★ Favourite Opening"

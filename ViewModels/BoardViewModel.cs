@@ -51,6 +51,7 @@ namespace ChessProject.ViewModels
         public ICommand FlipBoardCommand { get; }
         public ICommand SaveGameCommand { get; }
         public ICommand SaveFavouriteOpeningCommand { get; }
+        public ICommand SaveLocalGameCommand { get; }
 
 
         // Opening Information (displayed in side panel)
@@ -179,6 +180,7 @@ namespace ChessProject.ViewModels
             FlipBoardCommand = new RelayCommand(FlipBoard);
             SaveGameCommand = new RelayCommand(SaveGame);
             SaveFavouriteOpeningCommand = new RelayCommand(SaveFavouriteOpening);
+            SaveLocalGameCommand = new RelayCommand(SaveLocalGame);
             SquareClickCommand = new RelayCommand<SquareViewModel>(OnSquareClicked);
 
             // Initialize move list displayed in side panel
@@ -2776,6 +2778,8 @@ namespace ChessProject.ViewModels
                 db.LocalGames.Add(GameMapper.ToLocalEntity(game));
                 db.SaveChanges();
             }
+
+            StatusMessage += " Game saved successfully.";
         }
 
 
