@@ -13,7 +13,18 @@ namespace ChessProject.ViewModels
     {
         // Properties:
         private List<Openings> _allOpenings; // Full dataset loaded from JSON
-        private bool _showingFavourites = false;
+
+        // State to track whether we're currently showing all openings or just favourites
+        private bool _showingFavourites;
+        public bool IsShowingFavourites
+        {
+            get => _showingFavourites;
+            set
+            {
+                _showingFavourites = value;
+                OnPropertyChanged();
+            }
+        }
 
         // Events:
         public event Action<Openings> OpeningSelected; // Raised when user chooses an opening to load
@@ -86,6 +97,7 @@ namespace ChessProject.ViewModels
             FilteredOpenings = new ObservableCollection<Openings>();
             FavouriteOpenings = new ObservableCollection<Openings>();
             DisplayOpenings = new ObservableCollection<Openings>();
+            DeleteFavouriteOpeningCommand = new RelayCommand<Openings>(DeleteFavouriteOpening);
 
             LoadOpeningCommand = new RelayCommand(
                 LoadSelectedOpening,
@@ -134,6 +146,30 @@ namespace ChessProject.ViewModels
                     });
                 }
             }
+        }
+
+        // Delete an opening from favourites
+        private void DeleteFavouriteOpening(Openings opening)
+        {
+            if (opening == null)
+                return;
+
+            using (var db = new ChessDbContext())
+            {
+                var entity = db.FavouriteOpenings
+                    .FirstOrDefault(o =>
+                        o.Name == opening.Opening &&
+                        o.ECO == opening.ECO);
+
+                if (entity != null)
+                {
+                    db.FavouriteOpenings.Remove(entity);
+                    db.SaveChanges();
+                }
+            }
+
+            LoadFavouriteOpenings();  // reload from DB
+            ApplyFilters();           // refresh UI
         }
 
         // Filtering / Searching / Sorting (LINQ):
@@ -239,14 +275,14 @@ namespace ChessProject.ViewModels
         private void ShowFavouriteOpenings()
         {
             LoadFavouriteOpenings();
-            _showingFavourites = true;
+            IsShowingFavourites = true;
             ApplyFilters();
         }
 
         // Show all openings (remove favourite filter)
         private void ShowAllOpenings()
         {
-            _showingFavourites = false;
+            IsShowingFavourites = false;
             ApplyFilters();
         }
 
@@ -274,5 +310,8 @@ namespace ChessProject.ViewModels
 
         public ICommand SortByEcoCommand => // Command for sorting by ECO code
             new RelayCommand(() => SetSort("ECO"));
+
+        public ICommand DeleteFavouriteOpeningCommand { get; } // Command for deleting an opening from favourites 
+
     }
 }

@@ -894,11 +894,11 @@ namespace ChessProject.ViewModels
             if (CurrentGameMode == GameMode.Local2Player && _selectedTimeOption != null)
             {
                 InitializeClocks(_selectedTimeOption);
-            }
 
-            // Clear move data
-            _moves.Clear();
-            DisplayMoves.Clear();
+                // Clear move data
+                _moves.Clear();
+                DisplayMoves.Clear();
+            }
 
             UpdateCurrentMoveHighlight();
             UpdateCheckHighlight();
@@ -938,6 +938,12 @@ namespace ChessProject.ViewModels
         {
             if (CurrentMoveIndex >= _moves.Count)
                 return;
+
+            if (CurrentMoveIndex == _moves.Count - 1 &&
+                CurrentGameMode == GameMode.Replay)
+            {
+                ShowReplayGameResult();
+            }
 
             CurrentTurn = CurrentTurn == PieceColour.White
                 ? PieceColour.Black
@@ -1973,15 +1979,34 @@ namespace ChessProject.ViewModels
         // 3 = target rank
         private void ApplyQueenCapture(string move, bool isWhite)
         {
-            // Convert SAN target square to board coordinates
-            int targetColumn = move[2] - 'a';
-            int targetRow = 8 - int.Parse(move[3].ToString());
+            // Remove annotations like +, #, !, ?
+            move = move.Replace("+", "")
+                       .Replace("#", "")
+                       .Replace("!", "")
+                       .Replace("?", "");
+
+            // Extract target square (always last 2 chars after cleaning)
+            string target = move.Substring(move.Length - 2);
+
+            int targetColumn = target[0] - 'a';
+            int targetRow = 8 - int.Parse(target[1].ToString());
 
             char disambiguation = '\0';
 
-            // Capture with disambiguation (Qdxe4, Q1xe4)
-            if (move.Length == 5)
-                disambiguation = move[1];
+            // Detect disambiguation (e.g. Qdxe4 or Q1xe4)
+            // Pattern examples:
+            // Qxe4   -> no disambiguation
+            // Qdxe4  -> file disambiguation
+            // Q1xe4  -> rank disambiguation
+            if (move.Length >= 5)
+            {
+                // Find character before 'x'
+                int captureIndex = move.IndexOf('x');
+                if (captureIndex > 1)
+                {
+                    disambiguation = move[captureIndex - 1];
+                }
+            }
 
             // Find queens that can capture on target square
             var possibleQueens = Squares.Where(s =>
@@ -2009,9 +2034,8 @@ namespace ChessProject.ViewModels
                         .Where(s => s.Column == fileColumn)
                         .ToList();
                 }
-
                 // Rank disambiguation (Q1xe4)
-                if (disambiguation >= '1' && disambiguation <= '8')
+                else if (disambiguation >= '1' && disambiguation <= '8')
                 {
                     int rankRow = 8 - int.Parse(disambiguation.ToString());
 
@@ -2491,8 +2515,11 @@ namespace ChessProject.ViewModels
             return false;
         }
 
+        #endregion
+
+        #region Game End Logic
         // Checks for checkmate or stalemate after each move and updates game status accordingly
-        private void CheckGameEnd() 
+        private void CheckGameEnd()
         {
             var service = new MoveGenerationService();
 
@@ -2518,7 +2545,66 @@ namespace ChessProject.ViewModels
             }
         }
 
+        private void ShowReplayGameResult()
+        {
+            if (_currentGame == null)
+                return;
 
+            string result = _currentGame.Result?.ToLower();
+
+            bool whiteWon =
+                result == "win" ||
+                result == "resigned" ||
+                result == "timeout" ||
+                result == "checkmated";
+
+            bool blackWon = result == "lose";
+
+            if (result == "checkmated")
+            {
+                StatusMessage = whiteWon
+                    ? $"Checkmate – {_currentGame.White} wins"
+                    : $"Checkmate – {_currentGame.Black} wins";
+
+                StatusColor = Brushes.Red;
+            }
+            else if (result == "timeout")
+            {
+                StatusMessage = whiteWon
+                    ? $"{_currentGame.White} wins on time"
+                    : $"{_currentGame.Black} wins on time";
+
+                StatusColor = Brushes.Orange;
+            }
+            else if (result == "resigned")
+            {
+                StatusMessage = whiteWon
+                    ? $"{_currentGame.White} wins by resignation"
+                    : $"{_currentGame.Black} wins by resignation";
+
+                StatusColor = Brushes.Orange;
+            }
+            else if (result == "stalemate")
+            {
+                StatusMessage = "Stalemate";
+                StatusColor = Brushes.Orange;
+            }
+            else if (result == "repetition")
+            {
+                StatusMessage = "Draw by repetition";
+                StatusColor = Brushes.Orange;
+            }
+            else if (result == "agreed")
+            {
+                StatusMessage = "Draw";
+                StatusColor = Brushes.Orange;
+            }
+            else
+            {
+                StatusMessage = "Game Over";
+                StatusColor = Brushes.White;
+            }
+        }
         #endregion
 
         #region Local Game

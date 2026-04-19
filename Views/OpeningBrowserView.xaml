@@ -98,10 +98,60 @@
                                 </Button>
                             </GridViewColumn.Header>
 
-                            <GridViewColumn.DisplayMemberBinding>
-                                <!-- Display the opening name -->
-                                <Binding Path="Opening"/> 
-                            </GridViewColumn.DisplayMemberBinding>
+                            <GridViewColumn.CellTemplate>
+                                <DataTemplate>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+
+                                        <!-- Opening Name -->
+                                        <TextBlock Text="{Binding Opening}"
+                                                   Padding="4"
+                                                   VerticalAlignment="Center"/>
+
+                                        <!-- Delete Button -->
+                                        <Button Grid.Column="1"
+                                                Content="✕"
+                                                Width="18"
+                                                Height="18"
+                                                Margin="6,0,0,0"
+                                                Background="Transparent"
+                                                BorderThickness="0"
+                                                FontWeight="Bold"
+                                                Cursor="Hand"
+                                                VerticalAlignment="Center"
+                                                Command="{Binding DataContext.DeleteFavouriteOpeningCommand, RelativeSource={RelativeSource AncestorType=ListView}}"
+                                                CommandParameter="{Binding}">
+
+                                            <Button.Style>
+                                                <Style TargetType="Button">
+                                                    <Setter Property="Foreground" Value="#888"/>
+                                                    <Setter Property="Opacity" Value="0.6"/>
+                                                    <Setter Property="Visibility" Value="Collapsed"/>
+
+                                                    <Style.Triggers>
+
+                                                        <!-- Only show in favourites -->
+                                                        <DataTrigger Binding="{Binding DataContext.IsShowingFavourites, RelativeSource={RelativeSource AncestorType=ListView}}" Value="True">
+                                                            <Setter Property="Visibility" Value="Visible"/>
+                                                        </DataTrigger>
+
+                                                        <!-- Hover -->
+                                                        <Trigger Property="IsMouseOver" Value="True">
+                                                            <Setter Property="Foreground" Value="#FF5555"/>
+                                                            <Setter Property="Opacity" Value="1"/>
+                                                        </Trigger>
+
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Button.Style>
+                                        </Button>
+
+                                    </Grid>
+                                </DataTemplate>
+                            </GridViewColumn.CellTemplate>
                         </GridViewColumn>
 
                         <!-- ECO -->

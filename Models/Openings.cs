@@ -1,8 +1,8 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
 
 namespace ChessProject.Models
 {
-    // Represents a single chess opening loaded from JSON
     public class Openings
     {
         public string Opening { get; set; }
@@ -15,7 +15,34 @@ namespace ChessProject.Models
 
         public string Moves { get; set; }
 
-        // List of SAN moves (e4, c5, Nf3, etc.)
-        public List<string> MovesList { get; set; }
+        // Computed property to get a list of moves from the Moves string
+        public List<string> MovesList =>
+        Moves?
+            .Split(' ')
+            .Select(m => m.Trim())
+            .Where(m => !string.IsNullOrWhiteSpace(m))
+            .Select(CleanMove)
+            .Where(m => !string.IsNullOrEmpty(m))
+            .ToList()
+        ?? new List<string>();
+
+        // Helper method to clean move strings
+        private string CleanMove(string move)
+        {
+            if (string.IsNullOrWhiteSpace(move))
+                return null;
+
+            // Remove move numbers like "1.e4"
+            move = System.Text.RegularExpressions.Regex.Replace(move, @"^\d+\.*", "");
+
+            // Remove annotations
+            move = move.Replace("+", "")
+                       .Replace("#", "")
+                       .Replace("!", "")
+                       .Replace("?", "");
+
+            return move.Trim();
+        }
+
     }
 }
